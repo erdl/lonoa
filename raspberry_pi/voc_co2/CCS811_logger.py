@@ -21,7 +21,7 @@ ccs.tempOffset = temp - 25.0
 #adds the file header for new csv
 file_exist = os.path.isfile('pi_ccs811_log.csv')
 if not file_exist:
-	write2csv(['Timestamp', 'CO2 (ppm)', 'TVOC (ppb)', 'Temperature (C)'])
+	write2csv(['timestamp', 'co2_ppm', 'tvoc_ppb', 'temperature_c'])
 
 while(1):
 	if ccs.available():
