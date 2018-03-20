@@ -25,16 +25,16 @@ if not file_exist:
 
 while(1):
 	if ccs.available():
-	    CO2 = ccs.geteCO2()
-	    TVOC = ccs.getTVOC()
+	    co2 = ccs.geteCO2()
+	    tvoc = ccs.getTVOC()
 	    temp = ccs.calculateTemperature()
 	    timestamp = time()
 	    if not ccs.readData():
-	      if CO2 == 0:
+	      if co2 == 0:
 	        pass
 	      else:
-	        print "timestamp: ", timestamp, ", CO2: ", CO2, "ppm, TVOC: ", TVOC, " temp: ", temp
-	        write2csv([timestamp, CO2, TVOC, temp])
+	        print "timestamp: ", timestamp, ", CO2: ", co2, "ppm, TVOC: ", tvoc, " temp: ", temp
+	        write2csv([timestamp, co2, tvoc, temp])
 	    else:
 	      print "ERROR!"
 	      while(1):
