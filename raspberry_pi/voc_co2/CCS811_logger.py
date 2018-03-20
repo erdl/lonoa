@@ -4,7 +4,7 @@ import csv
 import os.path 
 
 def write2csv(data):
-	dataCSV = open('CCS811_log.csv', 'a')
+	dataCSV = open('pi_ccs811_log.csv', 'a')
 	log = csv.writer(dataCSV)
 	log.writerow(data)
 	dataCSV.close()
@@ -19,7 +19,7 @@ ccs.tempOffset = temp - 25.0
 
 
 #adds the file header for new csv
-file_exist = os.path.isfile('CCS811_log.csv')
+file_exist = os.path.isfile('pi_ccs811_log.csv')
 if not file_exist:
 	write2csv(['Timestamp', 'CO2 (ppm)', 'TVOC (ppb)', 'Temperature (C)'])
 
