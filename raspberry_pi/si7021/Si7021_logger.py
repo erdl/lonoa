@@ -30,11 +30,9 @@ def relative_humidity(raw):
 def temperature(raw):
     return raw * 175.72 / 65536.0 - 46.85
 
-pi = pigpio.pi()
-device = pi.i2c_open(BUS, I2C_ADDRESS)
-
-
 def main():
+    pi = pigpio.pi()
+    device = pi.i2c_open(BUS, I2C_ADDRESS)
     device = pi.i2c_write_byte(device, CMD_RH)
     sleep(0.1)
     a, b = pi.i2c_read_device(device, 2)
@@ -47,8 +45,8 @@ def main():
     raw_temp = int16bit(d)
     temp = temperature(raw_temp)
     print("Temperature = " + str(round(temp, 3)))
-
-    csvwrite([timestamp, humidity, temp])
+    
+    csvwrite([time(), humidity, temp])
 
 
 if __name__ == "__main__":
