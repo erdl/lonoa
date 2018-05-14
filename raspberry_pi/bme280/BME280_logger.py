@@ -29,7 +29,7 @@ def main():
 if __name__ == "__main__":
     try:
         if not os.path.isfile(OUTPUT_FILE):
-            csvwrite(['timestamp', 'temperature_c', 'pressure_hPa', 'humidity_%'])
+            csvwrite(['timestamp', 'temperature_c', 'pressure_hpa', 'humidity_percent'])
         while True:
             main()
             sleep(2)
