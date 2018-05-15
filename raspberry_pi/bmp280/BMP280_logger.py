@@ -15,11 +15,22 @@ def csvwrite(data):
     log.writerow(data)
     dataCSV.close()
 
+def getsealevel_pa():
+    dataCSV = open(OUTPUT_FILE, 'r')
+    last_row = dataCSV.readlines()[-1]
+    try:
+        sealevel_pa = float(last_row.split(",")[4] * 100)
+        return sealevel_pa
+    except ValueError:
+        # default value for sea level pressure
+        return 101630.0
+
+
 def main():
-    sensor = BMP280(mode=BMP280_STANDARD,address=I2C_ADDRESS)
+    sensor = BMP280(mode=BMP280_ULTRAHIGHRES,address=I2C_ADDRESS)
 
     temp = sensor.read_temperature()
-    # altitude = sensor.read_altitude()
+    altitude = sensor.read_altitude(sealevel_pa=getsealevel_pa())
     # pressure is returned in units of pascals and we would like to convert to hectopascal
     atmospheric_pressure = sensor.read_pressure() / 100
     sealevel_pressure = sensor.read_sealevel_pressure(altitude_m=altitude) / 100
