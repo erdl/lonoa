@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from Adafruit_BMP280 import *
 from time import sleep, time
 import os
