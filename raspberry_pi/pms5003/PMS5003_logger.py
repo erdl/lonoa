@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from time import sleep, time
 import serial
 import struct
