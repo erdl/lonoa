@@ -31,7 +31,7 @@ BYTE_2 = 1
 BYTE_5 = 4
 
 # Number of readings to take before calculating the average
-AVERAGE_READ = 60
+AVERAGE_READ = 300
 # Fieldset of keys used to parse the data list to calculate average
 AVERAGE_FIELD = ['data1', 'data2', 'data3']
 
@@ -83,7 +83,7 @@ def main():
                     timestamp, avg_pm1, avg_pm25, avg_pm10 = average_data
                     csvwrite([timestamp, avg_pm1, avg_pm25, avg_pm10])
                     del data_set[:]
-
+        sleep(1)
 
 if __name__ == "__main__":
     try:
