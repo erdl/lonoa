@@ -70,10 +70,10 @@ def main():
             for i in range(CHECKSUM_FRAME_LENGTH):
                 check += ord(s[i])
             if check == checksum:
-                print "Concentration Units (ug/m^3)"
-                print "---------------------------------------"
-                print "PM 1.0: %d\tPM2.5: %d\tPM10: %d" % (pm1_standard, pm25_standard, pm10_standard)
-                print "---------------------------------------"
+                #print "Concentration Units (ug/m^3)"
+                #print "---------------------------------------"
+                #print "PM 1.0: %d\tPM2.5: %d\tPM10: %d" % (pm1_standard, pm25_standard, pm10_standard)
+                #print "---------------------------------------"
                 #csvwrite([time(), pm1_standard, pm25_standard, pm10_standard])
                 data = {'data1': pm1_standard,
                         'data2': pm25_standard,
