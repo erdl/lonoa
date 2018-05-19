@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from time import sleep, time
 import serial
 import struct
@@ -31,7 +33,7 @@ BYTE_2 = 1
 BYTE_5 = 4
 
 # Number of readings to take before calculating the average
-AVERAGE_READ = 60
+AVERAGE_READ = 300
 # Fieldset of keys used to parse the data list to calculate average
 AVERAGE_FIELD = ['data1', 'data2', 'data3']
 
@@ -68,10 +70,10 @@ def main():
             for i in range(CHECKSUM_FRAME_LENGTH):
                 check += ord(s[i])
             if check == checksum:
-                print "Concentration Units (ug/m^3)"
-                print "---------------------------------------"
-                print "PM 1.0: %d\tPM2.5: %d\tPM10: %d" % (pm1_standard, pm25_standard, pm10_standard)
-                print "---------------------------------------"
+                #print "Concentration Units (ug/m^3)"
+                #print "---------------------------------------"
+                #print "PM 1.0: %d\tPM2.5: %d\tPM10: %d" % (pm1_standard, pm25_standard, pm10_standard)
+                #print "---------------------------------------"
                 #csvwrite([time(), pm1_standard, pm25_standard, pm10_standard])
                 data = {'data1': pm1_standard,
                         'data2': pm25_standard,
@@ -83,7 +85,7 @@ def main():
                     timestamp, avg_pm1, avg_pm25, avg_pm10 = average_data
                     csvwrite([timestamp, avg_pm1, avg_pm25, avg_pm10])
                     del data_set[:]
-
+        sleep(1)
 
 if __name__ == "__main__":
     try:
