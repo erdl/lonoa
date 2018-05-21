@@ -48,6 +48,8 @@ def average(data_list):
     avg_data.append(time())
     for key in AVERAGE_FIELD:
         avg_data.append(float((sum(data[key] for data in data_list)) / len(data_list)))
+        avg_data.append(max(data[key] for data in data_list))
+        avg_data.append(min(data[key] for data in data_list))
     return avg_data
 
 
@@ -82,15 +84,15 @@ def main():
                 # after taking the AVERAGE_READ number of data, then compute average and log the data
                 if len(data_set) >= AVERAGE_READ:
                     average_data = average(data_set)
-                    timestamp, avg_pm1, avg_pm25, avg_pm10 = average_data
-                    csvwrite([timestamp, avg_pm1, avg_pm25, avg_pm10])
+                    timestamp, avg_pm1, max_pm1, min_pm1, avg_pm25, max_pm25, min_pm25, avg_pm10, max_pm10, min_pm10 = average_data
+                    csvwrite([timestamp, min_pm1, avg_pm1, max_pm1, min_pm25, avg_pm25, max_pm25, min_pm10, avg_pm10, max_pm10])
                     del data_set[:]
         sleep(1)
 
 if __name__ == "__main__":
     try:
         if not os.path.isfile('pi_pms5003_log.csv'):
-            csvwrite(['timestamp', 'pm1_ug/m^3', 'pm2.5_ug/m^3', 'pm10_ug/m^3'])
+            csvwrite(['timestamp', 'pm1_ug/m^3_min', 'pm1_ug/m^3_avg', 'pm1_ug/m^3_max', 'pm2.5_ug/m^3_min', 'pm2.5_ug/m^3_avg', 'pm2.5_ug/m^3_max', 'pm10_ug/m^3_min', 'pm10_ug/m^3_avg', 'pm10_ug/m^3_max'])
         main()
 
     except KeyboardInterrupt:
