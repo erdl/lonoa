@@ -23,6 +23,8 @@ def average(data_list):
     avg_data.append(time())
     for key in AVERAGE_FIELD:
         avg_data.append(float((sum(data[key] for data in data_list)) / len(data_list)))
+        avg_data.append(max(data[key] for data in data_list))
+        avg_data.append(min(data[key] for data in data_list))
     return avg_data
 
 def main():
@@ -45,8 +47,8 @@ def main():
 
         if len(data_set) >= AVERAGE_READ:
             average_data = average(data_set)
-            timestamp, avg_temp, avg_pressure, avg_humidity = average_data
-            csvwrite([timestamp, avg_temp, avg_pressure, avg_humidity])
+            timestamp, avg_temp, max_temp, min_temp, avg_pressure, max_pressure, min_pressure, avg_humidity, max_humidity, min_humidity = average_data
+            csvwrite([timestamp, min_temp, avg_temp, max_temp, min_pressure, avg_pressure, max_pressure, min_humidity, avg_humidity, max_humidity])
             del data_set[:]
         
         sleep(1)
@@ -54,7 +56,7 @@ def main():
 if __name__ == "__main__":
     try:
         if not os.path.isfile(OUTPUT_FILE):
-            csvwrite(['timestamp', 'temperature_c', 'pressure_hpa', 'humidity_percent'])
+            csvwrite(['timestamp', 'temperature_c_min', 'temperature_c_avg', 'temperature_c_max', 'pressure_hpa_min', 'pressure_hpa_avg', 'pressure_hpa_max', 'humidity_percent_min', 'humidity_percent_avg', 'humidity_percent_max'])
         main()
 
     except KeyboardInterrupt:
