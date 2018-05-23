@@ -6,6 +6,8 @@ import struct
 import os
 import csv
 
+OUTPUT_FILE = "/home/jason/sensors/raspberry_pi/pms5003/pi_pms5003_log.csv"
+
 # Default serial port for raspberry pi 2
 PI2_SERIALPORT = "/dev/ttyAMA0"
 # Baudrate specified for the PMS5003 sensor
@@ -38,7 +40,7 @@ AVERAGE_READ = 300
 AVERAGE_FIELD = ['data1', 'data2', 'data3']
 
 def csvwrite(data):
-    dataCSV = open('pi_pms5003_log.csv', 'a')
+    dataCSV = open(OUTPUT_FILE, 'a')
     log = csv.writer(dataCSV)
     log.writerow(data)
     dataCSV.close()
@@ -91,7 +93,7 @@ def main():
 
 if __name__ == "__main__":
     try:
-        if not os.path.isfile('pi_pms5003_log.csv'):
+        if not os.path.isfile(OUTPUT_FILE):
             csvwrite(['timestamp', 'pm1_ug/m^3_min', 'pm1_ug/m^3_avg', 'pm1_ug/m^3_max', 'pm2.5_ug/m^3_min', 'pm2.5_ug/m^3_avg', 'pm2.5_ug/m^3_max', 'pm10_ug/m^3_min', 'pm10_ug/m^3_avg', 'pm10_ug/m^3_max'])
         main()
 
