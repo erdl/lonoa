@@ -10,9 +10,24 @@ import requests
 import sys
 import traceback
 
-def egauge_request(start_timestamp, end_timestamp, sensor_id, output_file):
-    host = set_egauge_host(sensor_id)
+def main():
+    #egauge_request('1526548513', '1526549515', '725', '~/Projects/egauge/output.csv')\
+
+    #originally the start of egauge_request(start_timestamp, end_timestamp, sensor_id, output_file)
+    script, start_timestamp, end_timestamp, sensor_id, output_file = sys.argv
+
+    minutes='m'
+    output_csv='c'
+    delta_compression='C'
+    #originally a call to set_egauge_host(sensor_id, minutes='m', output_csv='c', delta_compression='C'):
+    host = 'http://egauge{}.egaug.es/cgi-bin/egauge-show?'
+    host = host.format(sensor_id) + '&' \
+    + minutes + '&' \
+    + output_csv + '&' \
+    + delta_compression
+
     time_window = {'t': start_timestamp, 'f': end_timestamp}
+
     try:
         r = requests.get(host,params=time_window)
         if(r.status_code == requests.codes.ok):
@@ -24,40 +39,19 @@ def egauge_request(start_timestamp, end_timestamp, sensor_id, output_file):
                 df.to_csv(f, sep=',', header=False, index=False)'''
             with pd.option_context('display.max_rows', None, 'display.max_columns', 4):
                 print(df)
-            df_columns = convert_list_to_csv_row(df.columns.values)
+
+            #df_columns = convert_list_to_csv_row(df.columns.values)
+            df_columns = ''
+            #originally a call to convert_list_to_csv_row(values)
+            for value in df.columns.values:
+                if(df_columns != ''):
+                    df_columns = df_columns + value + ','
+                else:
+                    df_columns = value + ','
         else:
             r.raise_for_status()
     except requests.exceptions.HTTPError as e:
         print(e)
 
-def main():
-    egauge_request('1526548513', '1526549515', '725', '~/Projects/egauge/output.csv');
-
-#takes a list and returns a string in csv format
-def convert_list_to_csv_row(values):
-    csv_row = ''
-    for value in values:
-        if(csv_row != ''):
-            csv_row = csv_row + value + ','
-        else:
-            csv_row = value + ','
-    return csv_row
-
-#print each value in sys.argv
-def print_args():
-    for arg in sys.argv:
-        print ('arg is ' + arg)
-
-# set host for egauge api get request
-def set_egauge_host(sensor_id, minutes='m', output_csv='c', delta_compression='C'):
-    host = 'http://egauge{}.egaug.es/cgi-bin/egauge-show?'
-    host = host.format(sensor_id) + '&' \
-    + minutes + '&' \
-    + output_csv + '&' \
-    + delta_compression
-    return host
-
 if __name__ == "__main__":
-    script, start, end, egauge_id, file_path = sys.argv
-
-    egauge_request(start, end, egauge_id, file_path)
+    main()
