@@ -21,10 +21,7 @@ def main():
     delta_compression='C'
     #originally a call to set_egauge_host(sensor_id, minutes='m', output_csv='c', delta_compression='C'):
     host = 'http://egauge{}.egaug.es/cgi-bin/egauge-show?'
-    host = host.format(sensor_id) + '&' \
-    + minutes + '&' \
-    + output_csv + '&' \
-    + delta_compression
+    host = host.format(sensor_id) + '&' + minutes + '&' + output_csv + '&' + delta_compression
 
     time_window = {'t': start_timestamp, 'f': end_timestamp}
 
