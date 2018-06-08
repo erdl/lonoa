@@ -36,6 +36,7 @@ def main():
                 df.to_csv(f, sep=',', header=False, index=False)'''
             with pd.option_context('display.max_rows', None, 'display.max_columns', 4):
                 print(df)
+                df.to_csv(path_or_buf = output_file)
 
             #df_columns = convert_list_to_csv_row(df.columns.values)
             df_columns = ''
