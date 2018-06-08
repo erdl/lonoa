@@ -27,10 +27,9 @@ def main():
             print('Request was successful', str(r))
             df = pd.read_csv(StringIO(r.text))
             with pd.option_context('display.max_rows', None, 'display.max_columns', None):
-                print(df)
                 #for to_csv set header=False if we don't want to append header and set index=False to remove index and prevent header prepending a comma
                 df.to_csv(path_or_buf=output_file)
-            #used to remove leading comma from column headers string
+            #used to write column headers string without leading comma
             df_columns = ''
             for value in df.columns.values:
                 if(df_columns != ''):
