@@ -24,8 +24,8 @@ class PipelineStage:
     This class defines strings that could be inserted into error_log.pipeline_stage
 
     Each string represents at what stage of the api script execution an error_log row was inserted
-        data_acquisition: attempting to obtain readings from source
-        database_insertion: attempting to insert new rows into readings table
+        data_acquisition: obtaining readings from source
+        database_insertion: inserting new rows into readings table
     """
     data_acquisition = "data_acquisition"
     database_insertion = "database_insertion"
@@ -75,14 +75,13 @@ class SensorInfo(BASE):
     Sources of readings
 
     Columns:
-        purpose_id: integer uniquely identifying a purpose
-        sensor_id: string uniquely id'ing a sensor; used in egauge and webctrl API requests; hobo sensor serial number
-            one sensor_id may have multiple purposes (egauge)
+        purpose_id: uniquely identifies a purpose
+        sensor_id: string used in egauge and webctrl API requests; hobo sensor serial number; one sensor_id may have multiple purposes (egauge)
         data_sensor_info_mapping: matches full column name in raw data (egauge api data, hobo csv's, etc)
         sensor_part: string that represents one column name in data from a sensor if one row of data has multiple readings
-        sensor_type: string representing how readings are accessed; e.g. egauge, webctrl, hobo
-        is_active: boolean representing if script should request data from a sensor
-        last_updated_datetime: postgres timestamp used to keep track of datetime of last successfully inserted reading
+        sensor_type: string representing source of readings; e.g. egauge, webctrl, hobo
+        is_active: boolean representing if script can request data from a sensor
+        last_updated_datetime: used to keep track of datetime of last successfully inserted reading
         unit: unit of readings
     """
     __tablename__ = 'sensor_info'
@@ -110,9 +109,9 @@ class ErrorLog(BASE):
         log_id: uniquely identifies a row
         purpose_id: unique id representing a purpose
         datetime: when an api request or a reading insertion was attempted
-        status: string representing if api script ran successfully or if something else happened
+        status: boolean representing if api script ran successfully or not
         error_type: name of python exception caught; should remain empty if no exception was caught
-        pipeline_stage: what stage of the api script execution an error_log row was inserted
+        pipeline_stage: the stage of the api script execution when an error_log row was inserted
     """
     __tablename__ = 'error_log'
 
@@ -134,7 +133,7 @@ class ErrorLogDetails(BASE):
     This class represents the error_log_details table that houses any extra info needed to troubleshoot script problems.
 
     error_log_details is a long-form table.
-    It is currently used with hobo scripts to store filename, first and last reading timestamps,
+    It is currently used with hobo scripts to store fields like filename, first and last reading timestamps,
     as one hobo has multiple files, with potentially repeated names.
     """
     __tablename__ = 'error_log_details'
@@ -159,7 +158,7 @@ class ApiAuthentication(BASE):
 
 def setup():
     """
-    Setup tables for testing in a given database
+    Use defined classes to create tables in the database named in config file
     """
     config_path = str(Path(os.path.dirname(os.path.realpath(__file__))).parent.parent) + "/config.txt"
     with open(config_path, "r") as file:
@@ -174,7 +173,7 @@ def setup():
 
 def teardown():
     """
-    Drop each table that was set up for testing in a given database
+    Drop all tables in the database named in config file
     """
     config_path = str(Path(os.path.dirname(os.path.realpath(__file__))).parent.parent) + "/config.txt"
     with open(config_path, "r") as file:
