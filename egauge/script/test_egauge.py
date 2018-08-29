@@ -1,121 +1,113 @@
+#!./env/bin/python3
 """
-Test suite for egauge_api using the unittest module
-"""
+Test suite for api_egauge using the unittest module
 
+WARNING: running this test modifies the postgresql database named "test"
+"""
 from freezegun import freeze_time
 
-import arrow
-import egauge_api
-import filecmp
-import os
-import random
+import api_egauge
+import orm_egauge
+import pandas
+import pendulum
 import unittest
 
-SCRIPT_DIRECTORY = os.path.dirname(os.path.realpath(__file__))
 
 class TestEgaugeAPI(unittest.TestCase):
     """
-    A test suite for egauge_api
+    A test suite for api_egauge
 
     Automatically runs any function starting with 'test_' in its name when main() is called
+    Automatically runs setUp() before and tearDown() after each of the 'test' functions run
 
-    Currently has tests for
-        1. running pull_egauge_data() with no pre-existing timestamp file
-        2. running pull_egauge_data() with a timestamp file that already has one timestamp
-
-     BUGS:
-      - setting current time using freezegun will result in any logged error messages using the 'frozen' time instead of the actual current time of the system.
-      - running pull_egauge_data using freezegun prevents time elapsed from working properly
+    Currently has tests for get_data_from_api()
     """
-    def test_blank_timestamp_file(self, sensor_id='725', unit_of_time='m'):
-        START_TIME = arrow.get('2018-01-01T00:00:00.000-10:00').timestamp
-        END_TIME = arrow.get('2018-01-01T01:00:00.000-10:00').timestamp
-        self.assertTrue(START_TIME < END_TIME)
+    sensor_id = 'egauge791'
+    db_url = 'postgresql:///test'
 
-        TEST_OUTPUT = SCRIPT_DIRECTORY + '/test_output.log'
-        TEST_TIMESTAMP_LOG = SCRIPT_DIRECTORY + '/test_timestamp.log'
-        self.assertFalse(os.path.isfile(TEST_TIMESTAMP_LOG))
 
-        with freeze_time(time_to_freeze=arrow.get(END_TIME).format('YYYY-MM-DD HH:mm:ss ZZ')):
-            egauge_api.pull_egauge_data(sensor_id, unit_of_time, TEST_OUTPUT, TEST_TIMESTAMP_LOG)
+    def setUp(self):
+        db = api_egauge.create_engine(self.db_url)
+        orm_egauge.BASE.metadata.create_all(db)
 
-        with open(TEST_TIMESTAMP_LOG, 'a+') as timestamp_file:
-            timestamp_file.seek(0)
-            for line in timestamp_file:
-                line = line.rstrip()
-                if line is not '':
-                    latest_timestamp_read_from_file = int(line)
-            self.assertTrue(latest_timestamp_read_from_file == END_TIME)
-            self.assertFalse(os.path.isfile(TEST_OUTPUT))
-        os.remove(TEST_TIMESTAMP_LOG)
 
-    def test_pull_egauge_data(self):
-        """
-        Test running pull_egauge_data multiple times to confirm that there are no missing values and that there are no duplicate values
+    def tearDown(self):
+        db = api_egauge.create_engine(self.db_url)
+        orm_egauge.BASE.metadata.drop_all(db)
 
-        Use freezegun to manually set the 'current time' for testing
 
-        Call pull_egauge_data() over a large amount of time and output the data to a expected output file
-        Call pull_egauge_data() multiple times adding up to that same amount of time and append data to a test output file
-            Use a for loop to iterate through elapsed time with random variations that will be subtracted from the current time interval to account for time variation in testing
-        Compare the expected and test files for differences
+    # test if two subsequent calls to get_data_from_api() will return duplicate timestamps
+    def test_api_requested_data_doesnt_overlap(self):
+        db = api_egauge.create_engine(self.db_url)
+        Session = api_egauge.sessionmaker(db)
+        conn = Session()
+        timestamps = [pendulum.parse('2019-02-01T00:00:00-10:00'), pendulum.parse('2019-02-01T00:05:00-10:00'), pendulum.parse('2019-02-01T00:10:00-10:00')]
+        # Shift timestamp back by 60 seconds when inserting table
+        # because get_data_from_api() will use timestamp + 60 seconds
+        # for the start time in its api request.
+        sensor_row = orm_egauge.SensorInfo(sensor_id=self.sensor_id, sensor_type="egauge", purpose_id=1, sensor_part="Usage [kW]", last_updated_datetime=timestamps[0].subtract(seconds=60), is_active=True)
+        conn.add(sensor_row)
+        conn.commit()
+        # get_data_from_api() adds 60 seconds to api_start_timestamp arg when making egauge api call
+        frozen_time1 = timestamps[1]
+        with freeze_time(time_to_freeze=frozen_time1):
+            reading_dataframe1, purpose_sensors = api_egauge.get_data_from_api(conn, self.sensor_id)
+        index1 = pandas.Index(reading_dataframe1['Date & Time'])
+        #print contents of Date & Time column for visual verification if test fails
+        print(index1)
+        # reading_dataframe1.to_csv(path_or_buf='test_output.log', mode='a+')
 
-        """
-        sensors = ['725']
-        # sensors = ['725', '795', '31871']
-        for sensor_id in sensors:
-            #set START_TIME and END_TIME by converting a human-readable time into a unix timestamp
-            START_TIME = arrow.get('2018-01-01T00:00:00.000-10:00').timestamp
-            END_TIME = arrow.get('2018-01-01T04:01:03.000-10:00').timestamp
+        conn.query(orm_egauge.SensorInfo.purpose_id).filter(orm_egauge.SensorInfo.sensor_id == self.sensor_id).update({"last_updated_datetime": timestamps[1].subtract(seconds=60)})
+        conn.commit()
+        frozen_time2 = timestamps[2]
+        with freeze_time(time_to_freeze=frozen_time2):
+            reading_dataframe2, purpose_sensors = api_egauge.get_data_from_api(conn, self.sensor_id)
+        index2 = pandas.Index(reading_dataframe2['Date & Time'])
+        print(index2)
+        # reading_dataframe2.to_csv(path_or_buf='test_output.log', mode='a+')
 
-            self.assertTrue(START_TIME < END_TIME)
+        frames = [reading_dataframe1, reading_dataframe2]
+        concatenated_frame = pandas.concat(frames)
+        conn.close()
+        self.assertTrue(not any(concatenated_frame['Date & Time'].duplicated()))
 
-            unit_of_time = 'm'
 
-            EXPECTED_OUTPUT = SCRIPT_DIRECTORY + '/expected_output.log'
-            EXPECTED_TIMESTAMP_LOG = SCRIPT_DIRECTORY + '/expected_timestamp.log'
-            #open EXPECTED_TIMESTAMP_LOG and append START_TIME
-            with open(EXPECTED_TIMESTAMP_LOG, 'a+') as exp_test_file:
-                exp_test_file.write(str(START_TIME) + '\n')
+    # test get_data_from_api() for missing rows by confirming
+    # if the correct number of values are returned from an api request
+    def test_api_requested_data_for_missing_rows(self):
+        db = api_egauge.create_engine(self.db_url)
+        Session = api_egauge.sessionmaker(db)
+        conn = Session()
+        start_timestamp = pendulum.parse('2019-02-01T00:00:00.000-10:00')
+        end_timestamp = pendulum.parse('2019-02-01T00:15:44.100-10:00')
+        #insert start_timestamp into database_insertion_timestamp
+        sensor_row = orm_egauge.SensorInfo(sensor_id=self.sensor_id, sensor_type="egauge", purpose_id=1, sensor_part="Usage [kW]", last_updated_datetime=start_timestamp.subtract(seconds=60), is_active=True)
+        conn.add(sensor_row)
+        conn.commit()
+        frozen_time = end_timestamp
+        with freeze_time(time_to_freeze=frozen_time):
+            reading_dataframe, purpose_sensors = api_egauge.get_data_from_api(conn, self.sensor_id)
+        index = pandas.Index(reading_dataframe['Date & Time'])
+        print(index)
+        # get the difference in minutes between the start and end time
+        diff = end_timestamp - start_timestamp
+        minutes, remainder = divmod(diff.seconds, 60)
+        conn.close()
+        # Check if difference in minutes between the start and end
+        # matches the number of rows in the reading_dataframe
+        self.assertTrue(minutes == reading_dataframe.shape[0])
 
-            #sensor_id, unit_of_time, output_file, timestamp_log
-            with freeze_time(time_to_freeze=arrow.get(END_TIME).format('YYYY-MM-DD HH:mm:ss ZZ')):
-                egauge_api.pull_egauge_data(sensor_id, unit_of_time, EXPECTED_OUTPUT, EXPECTED_TIMESTAMP_LOG)
 
-            #notice that START_TIME is used to set current_timestamp because the time interval will be added within the while loop
-            TEST_OUTPUT = SCRIPT_DIRECTORY + '/test_output.log'
-            TEST_TIMESTAMP_LOG = SCRIPT_DIRECTORY + '/test_timestamp.log'
-            #open TEST_TIMESTAMP_LOG and append START_TIME
-            with open(TEST_TIMESTAMP_LOG, 'a+') as test_file:
-                test_file.write(str(START_TIME) + '\n')
+    """
+    unit test example template
 
-            # MAX_TIME_INTERVAL represents the maximum number of seconds elapsed between calls
-            MAX_TIME_INTERVAL = 3600
-            # seed can be any integer; setting the seed allows for consistency in testing
-            random.seed(42)
-            # use floor division to ensure that an int is returned from dividing an int by an int
-            MAX_NUMBER_OF_PULLS = int((END_TIME - START_TIME)//MAX_TIME_INTERVAL)
-            # use for loop to simulate calling egauge_api.pull_egauge_data() multiple times over randomly generated periods of time
-            for number_of_pulls in range(MAX_NUMBER_OF_PULLS + 1):
-                current_timestamp = ''
-                if(number_of_pulls < MAX_NUMBER_OF_PULLS):
-                    max_time_elapsed = (number_of_pulls + 1) * MAX_TIME_INTERVAL
-                    random_time_variance = random.randrange(1, MAX_TIME_INTERVAL)
-                    current_timestamp = max_time_elapsed - random_time_variance + START_TIME
-                else: #during the last pull, set the current time to END_TIME
-                    current_timestamp = END_TIME
-                # make a call to pull_egauge_data() setting current time to the latest value of current_timestamp
-                with freeze_time(time_to_freeze=arrow.get(current_timestamp).format('YYYY-MM-DD HH:mm:ss ZZ')):
-                    egauge_api.pull_egauge_data(sensor_id, unit_of_time, TEST_OUTPUT, TEST_TIMESTAMP_LOG)
+    def test_something(self): #name must begin with 'test_' if you want unittest.main() to automatically run it
+        # write test code that runs your desired function in a certain way that creates a certain result
+        # call an assert function that will return a boolean based on the result of your test code
+        self.assertTrue(True)
 
-            #confirm that the output files match
-            self.assertTrue(filecmp.cmp(EXPECTED_OUTPUT, TEST_OUTPUT))
+    """
 
-            #cleanup
-            os.remove(EXPECTED_TIMESTAMP_LOG)
-            os.remove(TEST_TIMESTAMP_LOG)
-            os.remove(EXPECTED_OUTPUT)
-            os.remove(TEST_OUTPUT)
 
 if __name__ == '__main__':
     unittest.main()
