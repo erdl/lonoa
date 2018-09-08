@@ -5,7 +5,7 @@ from time import sleep, time
 import csv
 import os
 
-OUTPUT_FILE = 'pi_si7021_log.csv'
+OUTPUT_FILE = '/home/jason/sensors/raspberry_pi/si7021/pi_si7021_log.csv'
 
 # Number of readings to take before calculating the average
 AVERAGE_READ = 300

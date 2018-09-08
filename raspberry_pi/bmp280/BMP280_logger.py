@@ -8,7 +8,7 @@ import csv
 # BMP280 uses address 0x76 on the I2C bus
 I2C_ADDRESS = 0x76
 
-OUTPUT_FILE = 'pi_bmp280_log.csv'
+OUTPUT_FILE = '/home/jason/sensors/raspberry_pi/bmp280/pi_bmp280_log.csv'
 
 # Number of readings to take before calculating the average
 AVERAGE_READ = 300
