@@ -51,17 +51,17 @@ if __name__ == '__main__':
         else:
             print(__file__ + ': database named ' + sys.argv[1] + ' already exists')
         # grant database permissions to root and locked user
-        users = [locked_username, 'root']
-        for user in users:
+        #users = [locked_username, 'root']
+        #for user in users:
             # create database role for crontab user if not exists
-            results = conn.execute('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = \'' + user +'\'')
-            if not results.first():
-                conn.execute('CREATE USER ' + user)
-            else:
-                print(__file__ + ': database user named ' + user + ' already exists')
-            #allow user to connect to database
-            conn.execute('GRANT CONNECT ON DATABASE ' + db_name + ' TO ' + user);
-            conn.execute('commit')
+            #results = conn.execute('SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = \'' + user +'\'')
+            #if not results.first():
+            #    conn.execute('CREATE USER ' + user)
+            #else:
+            #    print(__file__ + ': database user named ' + user + ' already exists')
+            ##allow user to connect to database
+            #conn.execute('GRANT CONNECT ON DATABASE ' + db_name + ' TO ' + user);
+            #conn.execute('commit')
         conn.close()
 
         # create all necessary tables in database
@@ -75,12 +75,12 @@ if __name__ == '__main__':
         engine = sqlalchemy.create_engine('postgres://' + current_user + '@/' + db_name)
         conn = engine.connect()
         conn.execute('commit')
-        # grant db permissions to locked user and root
-        users = [locked_username, 'root']
-        for user in users:
-            # grant all necessary database privileges for crontab user to run scripts from crontab
-            conn.execute('GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO ' + user)
-            conn.execute('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ' + user)
+        ## grant db permissions to locked user and root
+        #users = [locked_username, 'root']
+        #for user in users:
+            ## grant all necessary database privileges for crontab user to run scripts from crontab
+            #conn.execute('GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO ' + user)
+            #conn.execute('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ' + user)
         conn.close()
 
         # add project_folder_path to Project table
@@ -99,27 +99,27 @@ if __name__ == '__main__':
         conn.commit()
         conn.close()
 
-        print(__file__ + ': enabling file permissions')
-        # create sensors group for sensors file permissions
-        subprocess.run(['sudo', 'groupadd', 'sensors'])
-        # make sensors primary group of current user
-        subprocess.run(['sudo', 'usermod', '-g', 'sensors', current_user])
-        subprocess.run(['sudo', 'usermod', '-g', 'sensors', locked_username])
-        # add locked user to sensors
-        # subprocess.run(['sudo', 'usermod', '-a', '-G', 'sensors', 'locked_user'])
+        #print(__file__ + ': enabling file permissions')
+        ## create sensors group for sensors file permissions
+        #subprocess.run(['sudo', 'groupadd', 'sensors'])
+        ## make sensors primary group of current user
+        #subprocess.run(['sudo', 'usermod', '-g', 'sensors', current_user])
+        #subprocess.run(['sudo', 'usermod', '-g', 'sensors', locked_username])
+        ## add locked user to sensors
+        ## subprocess.run(['sudo', 'usermod', '-a', '-G', 'sensors', 'locked_user'])
 
-        # grant read, write permissions to locked_user
-        sensor_types = ('egauge', 'hobo', 'webctrl')
+        ## grant read, write permissions to locked_user
+        #sensor_types = ('egauge', 'hobo', 'webctrl')
         # go through each relevant subfolder in sensors
-        for sensor_type in sensor_types:
-            filename = project_folder_path + '/' + sensor_type + '/script/error.log'
+        #for sensor_type in sensor_types:
+            #filename = project_folder_path + '/' + sensor_type + '/script/error.log'
             # should create error_log file if it does not already exist
-            with open(filename, 'a+') as file:
-                # use subprocess to run setfacl Linux command similar to "setfacl -m user:locked_user:rw egauge/script/error.log"
-                # should grant read and write permissions for error.log file to user
-                subprocess.run(['setfacl', '-m', 'user:' + locked_username + ':rw', filename])
-            # grant file permissions on sensor_type/script/ directories so that locked_user can write using crontab
-            subprocess.run(['sudo', 'chgrp', 'sensors', sensor_type + '/script'])
+            #with open(filename, 'a+') as file:
+                ## use subprocess to run setfacl Linux command similar to "setfacl -m user:locked_user:rw egauge/script/error.log"
+                ## should grant read and write permissions for error.log file to user
+                #subprocess.run(['setfacl', '-m', 'user:' + locked_username + ':rw', filename])
+            ## grant file permissions on sensor_type/script/ directories so that locked_user can write using crontab
+            #subprocess.run(['sudo', 'chgrp', 'sensors', sensor_type + '/script'])
 
         # TODO if needed, grant execute file permissions on api/extract/orm scripts to locked_user
 
