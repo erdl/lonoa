@@ -12,8 +12,8 @@ if __name__=='__main__':
     cron = crontab.CronTab(user='locked_user')
 
     #disable old crontab tasks
-    cron.remove_all()
-    print(__file__ + ': removed old jobs from database')
+    #cron.remove_all()
+    #print(__file__ + ': removed old jobs from database')
 
     # get db connection
     config_path = "config.txt"
