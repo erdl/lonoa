@@ -75,7 +75,7 @@ def get_data_from_api(conn, sensor_id):
     """
     current_time = pendulum.now('Pacific/Honolulu')
     # The next lines of code before setting api_start_time used to be in their own function get_most_recent_timestamp_from_db()
-    purpose_sensors = conn.query(orm_egauge.SensorInfo.purpose_id, orm_egauge.SensorInfo.data_sensor_info_mapping, orm_egauge.SensorInfo.last_updated_datetime).\
+    purpose_sensors = conn.query(orm_egauge.SensorInfo.purpose_id, orm_egauge.SensorInfo.data_sensor_info_mapping, orm_egauge.SensorInfo.last_updated_datetime, orm_egauge.SensorInfo.units).\
         filter_by(sensor_id=sensor_id,is_active=True)
     last_updated_datetime = purpose_sensors[0].last_updated_datetime
     if last_updated_datetime:
@@ -147,7 +147,7 @@ def insert_readings_into_database(conn, readings, purpose_sensors):
                     column_name = columns[i+1]
                     # only insert column's reading if data_sensor_info_mapping matches column_name
                     if purpose_sensor.data_sensor_info_mapping == column_name:
-                        reading_row = orm_egauge.Readings(purpose_id=purpose_sensor.purpose_id, datetime=row_datetime, value=row_reading)
+                        reading_row = orm_egauge.Readings(purpose_id=purpose_sensor.purpose_id, datetime=row_datetime, value=row_reading, units=purpose_sensor.units)
                         conn.add(reading_row)
                         rows_inserted += 1
                         new_last_updated_datetime = row_datetime
