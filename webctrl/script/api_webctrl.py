@@ -115,7 +115,7 @@ def insert_readings_into_database(conn, readings, sensor):
                 reading_value = reading[key]
         # subtract 10 hours from reading time for comparison because it's GMT and last_updated_datetime is GMT - 10
         if reading_time.subtract(hours=10) > pendulum.instance(sensor.last_updated_datetime):
-            reading_row = orm_webctrl.Readings(purpose_id=sensor.purpose_id, datetime=reading_time, value=reading_value)
+            reading_row = orm_webctrl.Readings(purpose_id=sensor.purpose_id, datetime=reading_time, value=reading_value, units=sensor.units)
             conn.add(reading_row)
             rows_inserted += 1
             new_last_updated_datetime = reading_time
@@ -154,7 +154,7 @@ def log_failure_to_connect_to_database(conn, exception, sensor):
 if __name__ == '__main__':
     # connect to the database
     conn = get_db_handler()
-    sensors = conn.query(orm_webctrl.SensorInfo.purpose_id, orm_webctrl.SensorInfo.sensor_id, orm_webctrl.SensorInfo.last_updated_datetime).filter_by(sensor_type=orm_webctrl.SensorType.webctrl, is_active=True)
+    sensors = conn.query(orm_webctrl.SensorInfo.purpose_id, orm_webctrl.SensorInfo.sensor_id, orm_webctrl.SensorInfo.last_updated_datetime, orm_webctrl.SensorInfo.units).filter_by(sensor_type=orm_webctrl.SensorType.webctrl, is_active=True)
     for sensor in sensors:
         try:
             readings = get_data_from_api(sensor, conn)
