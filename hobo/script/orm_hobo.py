@@ -65,6 +65,7 @@ class Readings(BASE):
     datetime = Column(TIMESTAMP, primary_key=True)
     purpose_id = Column(Integer, primary_key=True)
     value = Column(DOUBLE_PRECISION)
+    units = Column(String)
 
 
 class SensorInfo(BASE):
@@ -79,7 +80,7 @@ class SensorInfo(BASE):
         sensor_type: string representing source of readings; e.g. egauge, webctrl, hobo
         is_active: boolean representing if script can request data from a sensor
         last_updated_datetime: used to keep track of datetime of last successfully inserted reading
-        unit: unit of readings
+        units: unit of readings
     """
     __tablename__ = 'sensor_info'
 
@@ -90,7 +91,7 @@ class SensorInfo(BASE):
     sensor_type = Column(String)
     is_active = Column(Boolean)
     last_updated_datetime = Column(TIMESTAMP)
-    unit = Column(String)
+    units = Column(String)
 
 
 class ErrorLog(BASE):

@@ -77,8 +77,8 @@ def get_csv_from_folder_not_in_db(conn, csv_filename):
     # create a list of sensor_info_rows which will be used to iterate through each data_sensor_info_mapping in each csv_reading row in the insert...() function
     sensor_info_rows = []
     for data_sensor_info_mapping in csv_readings.columns[1:]:
-        purpose_id, last_updated_datetime = conn.query(orm_hobo.SensorInfo.purpose_id, orm_hobo.SensorInfo.last_updated_datetime).filter_by(sensor_id=sensor_id, data_sensor_info_mapping=data_sensor_info_mapping, is_active=True).first()[:2]
-        sensor_info_rows.append(orm_hobo.SensorInfo(data_sensor_info_mapping=data_sensor_info_mapping, purpose_id=purpose_id, last_updated_datetime=last_updated_datetime))
+        purpose_id, last_updated_datetime, units = conn.query(orm_hobo.SensorInfo.purpose_id, orm_hobo.SensorInfo.last_updated_datetime, orm_hobo.SensorInfo.units).filter_by(sensor_id=sensor_id, data_sensor_info_mapping=data_sensor_info_mapping, is_active=True).first()[:3]
+        sensor_info_rows.append(orm_hobo.SensorInfo(data_sensor_info_mapping=data_sensor_info_mapping, purpose_id=purpose_id, last_updated_datetime=last_updated_datetime, units=units))
     # # Units
     # timezone_units = [x.split(', ')[1] for x in timezone_units]
     # #Timezone needs no further pre-processing
@@ -146,7 +146,7 @@ def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
     if rows_returned > 0:
         for csv_reading in csv_readings.itertuples():
             for i in range(0, len(sensor_info_rows)):
-                reading_row = orm_hobo.Readings(datetime=csv_reading[1], purpose_id=sensor_info_rows[i].purpose_id, value=csv_reading[i+2])
+                reading_row = orm_hobo.Readings(datetime=csv_reading[1], purpose_id=sensor_info_rows[i].purpose_id, value=csv_reading[i+2], units=sensor_info_rows[i].units)
                 conn.add(reading_row)
             last_reading_row_datetime = csv_reading[1]
     #update last_updated_datetime column for relevant rows in sensor_info table
