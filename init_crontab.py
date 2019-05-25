@@ -1,19 +1,12 @@
 import egauge.script.orm_egauge as orm_egauge
 import configparser
 import crontab
-
-# import getpass #used to get username
 import sqlalchemy
 
-# run with privilege using command:
-# sudo egauge/script/env/bin/python3 init_crontab.py
+
 if __name__=='__main__':
     #create a cron object
     cron = crontab.CronTab(user='locked_user')
-
-    #disable old crontab tasks
-    #cron.remove_all()
-    #print(__file__ + ': removed old jobs from database')
 
     # get db connection
     config_path = "config.txt"
@@ -33,7 +26,6 @@ if __name__=='__main__':
 
     # get path of project for usage in crontab commands
     project_path = conn.query(orm_egauge.Project.project_folder_path).first()[0]
-    # print('project_path ', project_path)
 
     for sensor_type in sensor_types:
         # hobo has a different script name
@@ -44,9 +36,6 @@ if __name__=='__main__':
 
         # command should cd to the appropriate */script directory, then run the script using python3 installed in virtual env
         # and outputs to crontab.txt in the */script directory
-        # job = cron.new(command='cd ' + project_path + '/' + sensor_type + '/script && ' +
-        #                        '../../egauge/script/env/bin/' + 'python3 ' + sensor_scriptname + ' >> crontab.txt')
-
         job = cron.new(command='cd ' + project_path + '/' + sensor_type + '/script && ' + \
                                'python3 ' + sensor_scriptname + ' >> crontab.txt')
 
@@ -54,4 +43,5 @@ if __name__=='__main__':
         job.minute.every(5)
         print(__file__ + ': attempting to write ' + sensor_type + ' job to crontab')
         cron.write()
+
     conn.close()
