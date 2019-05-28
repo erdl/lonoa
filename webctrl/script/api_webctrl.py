@@ -75,7 +75,7 @@ def get_data_from_api(sensor, conn):
     readings = requests.post(host, params=params, auth=tuple(auth))
     if readings.status_code == requests.codes.ok:
         print('API request was successful' + str(readings))
-        error_log_row = orm_webctrl.ErrorLog(datetime=current_time, status=True, purpose_id=sensor.purpose_id, pipeline_stage=orm_webctrl.PipelineStage.data_acquisition)
+        error_log_row = orm_webctrl.ErrorLog(datetime=current_time, status=True, purpose_id=sensor.purpose_id, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.data_acquisition)
         conn.add(error_log_row)
         conn.commit()
         return readings
@@ -125,7 +125,7 @@ def insert_readings_into_database(conn, readings, sensor):
     if new_last_updated_datetime:
         conn.query(orm_webctrl.SensorInfo).filter(orm_webctrl.SensorInfo.purpose_id == sensor.purpose_id).update(
             {"last_updated_datetime": new_last_updated_datetime})
-    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, status=True, purpose_id=sensor.purpose_id, pipeline_stage=orm_webctrl.PipelineStage.database_insertion)
+    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, status=True, purpose_id=sensor.purpose_id, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.database_insertion)
     conn.add(error_log_row)
     conn.commit()
     print(rows_inserted, ' row(s) inserted')
@@ -135,7 +135,7 @@ def insert_readings_into_database(conn, readings, sensor):
 def log_failure_to_connect_to_api(conn, exception, sensor):
     current_time = pendulum.now('Pacific/Honolulu')
     logging.exception('log_failure_to_connect_to_api')
-    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_webctrl.PipelineStage.data_acquisition, purpose_id=sensor.purpose_id, status=False)
+    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.data_acquisition, purpose_id=sensor.purpose_id, status=False)
     conn.add(error_log_row)
     conn.commit()
 
@@ -146,7 +146,7 @@ def log_failure_to_connect_to_database(conn, exception, sensor):
     conn.rollback()
     current_time = pendulum.now('Pacific/Honolulu')
     logging.exception('log_failure_to_connect_to_database')
-    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_webctrl.PipelineStage.database_insertion, purpose_id=sensor.purpose_id, status=False)
+    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.database_insertion, purpose_id=sensor.purpose_id, status=False)
     conn.add(error_log_row)
     conn.commit()
 
@@ -154,7 +154,7 @@ def log_failure_to_connect_to_database(conn, exception, sensor):
 if __name__ == '__main__':
     # connect to the database
     conn = get_db_handler()
-    sensors = conn.query(orm_webctrl.SensorInfo.purpose_id, orm_webctrl.SensorInfo.sensor_id, orm_webctrl.SensorInfo.last_updated_datetime, orm_webctrl.SensorInfo.units).filter_by(sensor_type=orm_webctrl.SensorType.webctrl, is_active=True)
+    sensors = conn.query(orm_webctrl.SensorInfo.purpose_id, orm_webctrl.SensorInfo.sensor_id, orm_webctrl.SensorInfo.last_updated_datetime, orm_webctrl.SensorInfo.units).filter_by(sensor_type=orm_webctrl.SensorInfo.SensorTypeEnum.webctrl, is_active=True)
     for sensor in sensors:
         try:
             readings = get_data_from_api(sensor, conn)
