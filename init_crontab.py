@@ -5,7 +5,7 @@ import sqlalchemy
 
 
 if __name__=='__main__':
-    #create a cron object
+    #create a cron object; requires sudo if user running script is not locked_user
     cron = crontab.CronTab(user='locked_user')
 
     # get db connection
@@ -20,12 +20,23 @@ if __name__=='__main__':
     Session = sqlalchemy.orm.sessionmaker(db)
     conn = Session()
 
+    # get path of project for usage in crontab commands
+    project_path = conn.query(orm_egauge.Project.project_folder_path).first()[0]
+
+    # go through all existing jobs
+    for job in cron:
+        # convert job to string for comparison
+        job_string = str(job)
+        # remove job if job command contains project path and job is not commented out
+        if (project_path in job_string) and (job_string[0] is not "#"):
+            print(__file__ + ': removing job \"' + job_string + "\"")
+            cron.remove(job)
+            # update crontab with removal
+            cron.write()
+
     # create a list with each unique sensor type
     sensor_types = [stype[0] for stype in conn.query(orm_egauge.SensorInfo.sensor_type).filter(orm_egauge.SensorInfo.is_active==True).distinct()]
     print(__file__ + ': extracted active sensor types ', str(sensor_types), ' from database')
-
-    # get path of project for usage in crontab commands
-    project_path = conn.query(orm_egauge.Project.project_folder_path).first()[0]
 
     for sensor_type in sensor_types:
         # hobo has a different script name
@@ -34,8 +45,8 @@ if __name__=='__main__':
         else:
             sensor_scriptname = 'api_' + sensor_type + '.py'
 
-        # command should cd to the appropriate */script directory, then run the script using python3 installed in virtual env
-        # and outputs to crontab.txt in the */script directory
+        # command should cd to the appropriate */script directory, then run the script
+        # and write outputs to crontab.txt in the */script directory
         job = cron.new(command='cd ' + project_path + '/' + sensor_type + '/script && ' + \
                                'python3 ' + sensor_scriptname + ' >> crontab.txt')
 
