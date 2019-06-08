@@ -45,10 +45,10 @@ def get_db_handler():
 
 
 # returns the last_updated_datetime and the readings after a successful api call
-#def get_readings_from_webctrl_api(conn, sensor_id):
+#def get_readings_from_webctrl_api(conn, query_string):
 def get_data_from_api(sensor, conn):
     """
-    1. build webctrl api request using sensor.sensor_id and sensor.last_updated_datetime from sensor_info table
+    1. build webctrl api request using sensor.query_string and sensor.last_updated_datetime from sensor_info table
     2. send request to webctrl api and attempt to download the readings data
 
     3. generate timestamp of data request
@@ -70,7 +70,7 @@ def get_data_from_api(sensor, conn):
     if start_date > end_date:
         raise ValueError('Error: start_date ' + start_date + ' was later than end_date ' + end_date)
     output_format = 'json'
-    params = {'id': sensor.sensor_id, 'start': start_date, 'end': end_date, 'format': output_format}
+    params = {'id': sensor.query_string, 'start': start_date, 'end': end_date, 'format': output_format}
     auth = (api_user, api_pass)
     readings = requests.post(host, params=params, auth=tuple(auth))
     if readings.status_code == requests.codes.ok:
@@ -97,7 +97,7 @@ def insert_readings_into_database(conn, readings, sensor):
     new_last_updated_datetime = ''
     rows_inserted = 0
     sensor_json_data = readings.json()
-    # sensor_id = sensor_json_data[0]['id']
+    # query_string = sensor_json_data[0]['id']
     readings = sensor_json_data[0]['s']
     #TEST
     print(str(len(readings)) + ' readings obtained', )
@@ -115,7 +115,7 @@ def insert_readings_into_database(conn, readings, sensor):
                 reading_value = reading[key]
         # subtract 10 hours from reading time for comparison because it's GMT and last_updated_datetime is GMT - 10
         if reading_time.subtract(hours=10) > pendulum.instance(sensor.last_updated_datetime):
-            reading_row = orm_webctrl.Readings(purpose_id=sensor.purpose_id, datetime=reading_time, value=reading_value, units=sensor.units)
+            reading_row = orm_webctrl.Readings(purpose_id=sensor.purpose_id, datetime=reading_time, value=reading_value, units=sensor.unit)
             conn.add(reading_row)
             rows_inserted += 1
             new_last_updated_datetime = reading_time
@@ -154,7 +154,7 @@ def log_failure_to_connect_to_database(conn, exception, sensor):
 if __name__ == '__main__':
     # connect to the database
     conn = get_db_handler()
-    sensors = conn.query(orm_webctrl.SensorInfo.purpose_id, orm_webctrl.SensorInfo.sensor_id, orm_webctrl.SensorInfo.last_updated_datetime, orm_webctrl.SensorInfo.units).filter_by(sensor_type=orm_webctrl.SensorInfo.SensorTypeEnum.webctrl, is_active=True)
+    sensors = conn.query(orm_webctrl.SensorInfo.purpose_id, orm_webctrl.SensorInfo.query_string, orm_webctrl.SensorInfo.last_updated_datetime, orm_webctrl.SensorInfo.unit).filter_by(script_folder=orm_webctrl.SensorInfo.ScriptFolderEnum.webctrl, is_active=True)
     for sensor in sensors:
         try:
             readings = get_data_from_api(sensor, conn)
