@@ -60,17 +60,17 @@ class SensorInfo(BASE):
 
     Columns:
         purpose_id: uniquely identifies a purpose
-        sensor_id: string used in egauge and webctrl API requests; hobo sensor serial number; one sensor_id may have multiple purposes (egauge)
+        query_string: string used in egauge and webctrl API requests; hobo sensor serial number; one query_string may have multiple purposes (egauge)
         data_sensor_info_mapping: matches full column name in raw data (egauge api data, hobo csv's, etc)
-        sensor_part: string that represents one column name in data from a sensor if one row of data has multiple readings
-        sensor_type: string representing source of readings; e.g. egauge, webctrl, hobo
+        type: string that represents one column name in data from a sensor if one row of data has multiple readings
+        script_folder: string representing source of readings; e.g. egauge, webctrl, hobo
         is_active: boolean representing if script can request data from a sensor
         last_updated_datetime: used to keep track of datetime of last successfully inserted reading
-        units: unit of readings
+        unit: unit of readings
     """
     __tablename__ = 'sensor_info'
 
-    class SensorTypeEnum(enum.Enum):
+    class ScriptFolderEnum(enum.Enum):
         """
         This class defines strings that could be inserted into sensor_info.sensor_type
         """
@@ -79,13 +79,13 @@ class SensorInfo(BASE):
         webctrl = "webctrl"
 
     purpose_id = Column(Integer, primary_key=True)
-    sensor_id = Column(String)
+    query_string = Column(String)
     data_sensor_info_mapping = Column(String)
-    sensor_part = Column(String)
-    sensor_type = Column(Enum(SensorTypeEnum))
+    type = Column(String)
+    script_folder = Column(Enum(ScriptFolderEnum))
     is_active = Column(Boolean)
     last_updated_datetime = Column(TIMESTAMP)
-    units = Column(String)
+    unit = Column(String)
 
 
 class ErrorLog(BASE):
@@ -198,5 +198,5 @@ def teardown():
 #         outcsv = csv.writer(outfile)
 #         rows = session.query(Reading)
 #         for row in rows:
-#             outcsv.writerow([row.reading_id, row.sensor_id, row.timestamp, row.units, row.reading])
+#             outcsv.writerow([row.reading_id, row.query_string, row.timestamp, row.units, row.reading])
 #     session.close()
