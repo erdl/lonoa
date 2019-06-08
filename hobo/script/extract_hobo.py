@@ -41,7 +41,7 @@ def get_csv_from_folder_not_in_db(conn, csv_filename):
     Takes database session 'conn' and 'csv_filename' string as arguments
 
     Opens csv file, reads file as dataframe and extracts metadata into a list
-    Checks if the timestamp of the earliest and latest rows in dataframe are already in db for a given sensor_id
+    Checks if the timestamp of the earliest and latest rows in dataframe are already in db for a given query_string
     """
     current_time = pendulum.now('Pacific/Honolulu')
     #assume there are no new readings by default
@@ -51,13 +51,13 @@ def get_csv_from_folder_not_in_db(conn, csv_filename):
         # Remove the first row, which breaks the csv format and contains the hobo sensor id
         line1 = next(reader)
         line1 = line1[0]
-        #Extract sensor_id
+        #Extract query_string
         # the next commented out line has a weird bug that sometimes removes the last digit instead of the trailing quotation mark
-        # sensor_id = line1.split(': ')[1][0:-1]
-        sensor_id = line1.split(': ')[1][0:]
+        # query_string = line1.split(': ')[1][0:-1]
+        query_string = line1.split(': ')[1][0:]
         # check if trailing quotation mark is present and remove if so
-        if sensor_id[-1:] is "\"":
-            sensor_id = sensor_id[0:-1]
+        if query_string[-1:] is "\"":
+            query_string = query_string[0:-1]
         #Store in table the remainder of the table
         table = list(reader)
     # #TEST
@@ -77,8 +77,8 @@ def get_csv_from_folder_not_in_db(conn, csv_filename):
     # create a list of sensor_info_rows which will be used to iterate through each data_sensor_info_mapping in each csv_reading row in the insert...() function
     sensor_info_rows = []
     for data_sensor_info_mapping in csv_readings.columns[1:]:
-        purpose_id, last_updated_datetime, units = conn.query(orm_hobo.SensorInfo.purpose_id, orm_hobo.SensorInfo.last_updated_datetime, orm_hobo.SensorInfo.units).filter_by(sensor_id=sensor_id, data_sensor_info_mapping=data_sensor_info_mapping, is_active=True).first()[:3]
-        sensor_info_rows.append(orm_hobo.SensorInfo(data_sensor_info_mapping=data_sensor_info_mapping, purpose_id=purpose_id, last_updated_datetime=last_updated_datetime, units=units))
+        purpose_id, last_updated_datetime, unit = conn.query(orm_hobo.SensorInfo.purpose_id, orm_hobo.SensorInfo.last_updated_datetime, orm_hobo.SensorInfo.unit).filter_by(query_string=query_string, data_sensor_info_mapping=data_sensor_info_mapping, is_active=True).first()[:3]
+        sensor_info_rows.append(orm_hobo.SensorInfo(data_sensor_info_mapping=data_sensor_info_mapping, purpose_id=purpose_id, last_updated_datetime=last_updated_datetime, unit=unit))
     # # Units
     # timezone_units = [x.split(', ')[1] for x in timezone_units]
     # #Timezone needs no further pre-processing
@@ -111,12 +111,12 @@ def get_csv_from_folder_not_in_db(conn, csv_filename):
         latest_csv_timestamp_row = orm_hobo.ErrorLogDetails(log_id=error_log_row.log_id, information_type="latest_csv_timestamp", information_value=latest_csv_timestamp)
         conn.add(latest_csv_timestamp_row)
     # check if earliest and latest file_timestamps are already in db and set new_readings variable
-    # assume that if first or last timestamps in csv were already inserted for that given timestamp and sensor_id, then all were already inserted
+    # assume that if first or last timestamps in csv were already inserted for that given timestamp and query_string, then all were already inserted
     earliest_csv_timestamp_is_in_db = conn.query(orm_hobo.Readings).filter_by(datetime=earliest_csv_timestamp, purpose_id=sensor_info_rows[0].purpose_id).first()
     latest_csv_timestamp_is_in_db = conn.query(orm_hobo.Readings).filter_by(datetime=latest_csv_timestamp, purpose_id=sensor_info_rows[0].purpose_id).first()
     if not earliest_csv_timestamp_is_in_db and not latest_csv_timestamp_is_in_db:
         new_readings = True
-    return csv_readings, (new_readings, earliest_csv_timestamp, csv_modified_timestamp, sensor_id, latest_csv_timestamp, sensor_info_rows)
+    return csv_readings, (new_readings, earliest_csv_timestamp, csv_modified_timestamp, query_string, latest_csv_timestamp, sensor_info_rows)
 
 
 def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
@@ -139,14 +139,14 @@ def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
     elif not csv_readings:
         logging.exception('csv_readings set to None')
         return
-    new_readings, earliest_csv_timestamp, csv_modified_timestamp, sensor_id, latest_csv_timestamp, sensor_info_rows = csv_metadata
+    new_readings, earliest_csv_timestamp, csv_modified_timestamp, query_string, latest_csv_timestamp, sensor_info_rows = csv_metadata
     if not new_readings:
         raise Exception("csv readings already inserted")
     rows_returned = csv_readings.shape[0]
     if rows_returned > 0:
         for csv_reading in csv_readings.itertuples():
             for i in range(0, len(sensor_info_rows)):
-                reading_row = orm_hobo.Readings(datetime=csv_reading[1], purpose_id=sensor_info_rows[i].purpose_id, value=csv_reading[i+2], units=sensor_info_rows[i].units)
+                reading_row = orm_hobo.Readings(datetime=csv_reading[1], purpose_id=sensor_info_rows[i].purpose_id, value=csv_reading[i+2], units=sensor_info_rows[i].unit)
                 conn.add(reading_row)
             last_reading_row_datetime = csv_reading[1]
     #update last_updated_datetime column for relevant rows in sensor_info table
@@ -185,7 +185,7 @@ def log_failure_to_get_csv_readings_from_folder_not_in_db(conn, csv_filename, ex
 
 def log_failure_to_insert_csv_readings_into_db(conn, csv_filename, csv_metadata, exception):
     current_time = pendulum.now('Pacific/Honolulu')
-    new_readings, earliest_csv_timestamp, csv_modified_timestamp, sensor_id, latest_csv_timestamp, sensor_info_rows = csv_metadata
+    new_readings, earliest_csv_timestamp, csv_modified_timestamp, query_string, latest_csv_timestamp, sensor_info_rows = csv_metadata
     #rollback any reading insertions during that iteration of for loop in main
     conn.rollback()
     logging.exception('log_failure_to_insert_csv_readings_into_db')
