@@ -63,11 +63,11 @@ def get_db_handler():
 
 
 # returns a readings dataframe
-#def get_readings_from_egauge_api(conn, sensor_id):
-def get_data_from_api(conn, sensor_id):
+#def get_readings_from_egauge_api(conn, query_string):
+def get_data_from_api(conn, query_string):
     """
     1. get a list of purpose_sensors that contain purpose id, sensor mapping, and last_updated_datetime
-    from sensor_info table where rows have matching sensor_id and are active
+    from sensor_info table where rows have matching query_string and are active
     2. download the data from api
 
     3. generate timestamp of data downloaded from api during 2 for each purpose_sensor tuple
@@ -75,8 +75,8 @@ def get_data_from_api(conn, sensor_id):
     """
     current_time = pendulum.now('Pacific/Honolulu')
     # The next lines of code before setting api_start_time used to be in their own function get_most_recent_timestamp_from_db()
-    purpose_sensors = conn.query(orm_egauge.SensorInfo.purpose_id, orm_egauge.SensorInfo.data_sensor_info_mapping, orm_egauge.SensorInfo.last_updated_datetime, orm_egauge.SensorInfo.units).\
-        filter_by(sensor_id=sensor_id,is_active=True)
+    purpose_sensors = conn.query(orm_egauge.SensorInfo.purpose_id, orm_egauge.SensorInfo.data_sensor_info_mapping, orm_egauge.SensorInfo.last_updated_datetime, orm_egauge.SensorInfo.unit).\
+        filter_by(query_string=query_string,is_active=True)
     last_updated_datetime = purpose_sensors[0].last_updated_datetime
     if last_updated_datetime:
         # Egauge api returns readings including the start time and excluding the end time.
@@ -85,7 +85,7 @@ def get_data_from_api(conn, sensor_id):
         # Add 60 seconds so that reading with last_updated_datetime is not reinserted.
         api_start_timestamp = pendulum.instance(last_updated_datetime).add(hours=10).add(seconds=60).int_timestamp
     else:
-        raise Exception('No existing last_updated_datetime found for ', sensor_id)
+        raise Exception('No existing last_updated_datetime found for ', query_string)
     current_timestamp = current_time.int_timestamp
     if api_start_timestamp > current_timestamp:
         raise ValueError('Error: api_start_timestamp ' + str(api_start_timestamp) + ' was later than current_timestamp ' + str(current_timestamp))
@@ -93,7 +93,7 @@ def get_data_from_api(conn, sensor_id):
     output_csv = 'c'
     unit_of_time = 'm'
     host = 'http://{}.egaug.es/cgi-bin/egauge-show?'
-    host = host.format(str(sensor_id)) + '&' + unit_of_time + '&' + output_csv + '&' + delta_compression
+    host = host.format(str(query_string)) + '&' + unit_of_time + '&' + output_csv + '&' + delta_compression
     time_window = {'t': api_start_timestamp, 'f': current_timestamp}
     request = requests.get(host, params=time_window)
     if request.status_code == requests.codes.ok:
@@ -147,7 +147,7 @@ def insert_readings_into_database(conn, readings, purpose_sensors):
                     column_name = columns[i+1]
                     # only insert column's reading if data_sensor_info_mapping matches column_name
                     if purpose_sensor.data_sensor_info_mapping == column_name:
-                        reading_row = orm_egauge.Readings(purpose_id=purpose_sensor.purpose_id, datetime=row_datetime, value=row_reading, units=purpose_sensor.units)
+                        reading_row = orm_egauge.Readings(purpose_id=purpose_sensor.purpose_id, datetime=row_datetime, value=row_reading, units=purpose_sensor.unit)
                         conn.add(reading_row)
                         rows_inserted += 1
                         new_last_updated_datetime = row_datetime
@@ -160,10 +160,10 @@ def insert_readings_into_database(conn, readings, purpose_sensors):
 
 
 #log_failure_to_get_readings_from_egauge_api
-def log_failure_to_connect_to_api(conn, exception, sensor_id):
+def log_failure_to_connect_to_api(conn, exception, query_string):
     current_time = pendulum.now('Pacific/Honolulu')
-    # get all purpose_ids associated with sensor_id
-    purpose_ids = [purpose_id[0] for purpose_id in conn.query(orm_egauge.SensorInfo.purpose_id).filter_by(sensor_id=sensor_id, is_active=True)]
+    # get all purpose_ids associated with query_string
+    purpose_ids = [purpose_id[0] for purpose_id in conn.query(orm_egauge.SensorInfo.purpose_id).filter_by(query_string=query_string, is_active=True)]
     logging.exception('Egauge API data request error')
     for purpose_id in purpose_ids:
         error_log_row = orm_egauge.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_egauge.ErrorLog.PipelineStageEnum.data_acquisition, purpose_id=purpose_id, status=False)
@@ -186,15 +186,15 @@ def log_failure_to_connect_to_database(conn, exception, purpose_sensors):
 if __name__ == '__main__':
     # start the database connection
     conn = get_db_handler()
-    # get a list of all unique sensor_id's for active egauges from sensor_info table
-    sensor_ids = [sensor_id[0] for sensor_id in conn.query(orm_egauge.SensorInfo.sensor_id).filter_by(sensor_type=orm_egauge.SensorInfo.SensorTypeEnum.egauge, is_active=True).distinct()]
-    for sensor_id in sensor_ids:
+    # get a list of all unique query_string's for active egauges from sensor_info table
+    query_strings = [query_string[0] for query_string in conn.query(orm_egauge.SensorInfo.query_string).filter_by(script_folder=orm_egauge.SensorInfo.ScriptFolderEnum.egauge, is_active=True).distinct()]
+    for query_string in query_strings:
         try:
             # readings is a pandas dataframe
-            readings, purpose_sensors = get_data_from_api(conn, sensor_id)
+            readings, purpose_sensors = get_data_from_api(conn, query_string)
         # catch egauge api request exceptions like requests.exceptions.ConnectionError, ValueError
         except (requests.exceptions.ConnectionError, Exception) as e:
-            log_failure_to_connect_to_api(conn, e, sensor_id)
+            log_failure_to_connect_to_api(conn, e, query_string)
             continue
         try:
             insert_readings_into_database(conn, readings, purpose_sensors)
