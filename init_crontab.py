@@ -34,27 +34,27 @@ if __name__=='__main__':
             # update crontab with removal
             cron.write()
 
-    # create a list with each unique sensor type
-    sensor_types = [stype[0] for stype in conn.query(orm_egauge.SensorInfo.sensor_type).filter(orm_egauge.SensorInfo.is_active==True).distinct()]
-    print(__file__ + ': extracted active sensor types ', str(sensor_types), ' from database')
+    # create a list with each unique script folder that is not set to None
+    script_folders = [stype[0] for stype in conn.query(orm_egauge.SensorInfo.script_folder).filter(orm_egauge.SensorInfo.is_active==True).distinct() if stype[0]]
+    print(__file__ + ': extracted active script folders ', str(script_folders), ' from database')
 
-    for sensor_type in sensor_types:
-        #use ".value" to access value of sensor_type enum
-        sensor_type = sensor_type.value
+    for script_folder in script_folders:
+        # use ".value" to access value of script_folder enum
+        script_folder = script_folder.value
         # hobo has a different script name
-        if sensor_type == 'hobo':
+        if script_folder == 'hobo':
             sensor_scriptname = 'extract_hobo.py'
         else:
-            sensor_scriptname = 'api_' + sensor_type + '.py'
+            sensor_scriptname = 'api_' + script_folder + '.py'
 
         # command should cd to the appropriate */script directory, then run the script
         # and write outputs to crontab.txt in the */script directory
-        job = cron.new(command='cd ' + project_path + '/' + sensor_type + '/script && ' + \
+        job = cron.new(command='cd ' + project_path + '/' + script_folder + '/script && ' + \
                                'python3 ' + sensor_scriptname + ' >> crontab.txt')
 
         # set crontab jobs to run every five minutes
         job.minute.every(5)
-        print(__file__ + ': attempting to write ' + sensor_type + ' job to crontab')
+        print(__file__ + ': attempting to write ' + script_folder + ' job to crontab')
         cron.write()
 
     conn.close()
