@@ -22,7 +22,7 @@ class TestEgaugeAPI(unittest.TestCase):
 
     Currently has tests for get_data_from_api()
     """
-    sensor_id = 'egauge791'
+    query_string = 'egauge791'
     db_url = 'postgresql:///test'
 
 
@@ -45,23 +45,23 @@ class TestEgaugeAPI(unittest.TestCase):
         # Shift timestamp back by 60 seconds when inserting table
         # because get_data_from_api() will use timestamp + 60 seconds
         # for the start time in its api request.
-        sensor_row = orm_egauge.SensorInfo(sensor_id=self.sensor_id, sensor_type="egauge", purpose_id=1, sensor_part="Usage [kW]", last_updated_datetime=timestamps[0].subtract(seconds=60), is_active=True)
+        sensor_row = orm_egauge.SensorInfo(query_string=self.query_string, script_folder="egauge", purpose_id=1, data_sensor_info_mapping="Usage [kW]", last_updated_datetime=timestamps[0].subtract(seconds=60), is_active=True)
         conn.add(sensor_row)
         conn.commit()
         # get_data_from_api() adds 60 seconds to api_start_timestamp arg when making egauge api call
         frozen_time1 = timestamps[1]
         with freeze_time(time_to_freeze=frozen_time1):
-            reading_dataframe1, purpose_sensors = api_egauge.get_data_from_api(conn, self.sensor_id)
+            reading_dataframe1, purpose_sensors = api_egauge.get_data_from_api(conn, self.query_string)
         index1 = pandas.Index(reading_dataframe1['Date & Time'])
         #print contents of Date & Time column for visual verification if test fails
         print(index1)
         # reading_dataframe1.to_csv(path_or_buf='test_output.log', mode='a+')
 
-        conn.query(orm_egauge.SensorInfo.purpose_id).filter(orm_egauge.SensorInfo.sensor_id == self.sensor_id).update({"last_updated_datetime": timestamps[1].subtract(seconds=60)})
+        conn.query(orm_egauge.SensorInfo.purpose_id).filter(orm_egauge.SensorInfo.query_string == self.query_string).update({"last_updated_datetime": timestamps[1].subtract(seconds=60)})
         conn.commit()
         frozen_time2 = timestamps[2]
         with freeze_time(time_to_freeze=frozen_time2):
-            reading_dataframe2, purpose_sensors = api_egauge.get_data_from_api(conn, self.sensor_id)
+            reading_dataframe2, purpose_sensors = api_egauge.get_data_from_api(conn, self.query_string)
         index2 = pandas.Index(reading_dataframe2['Date & Time'])
         print(index2)
         # reading_dataframe2.to_csv(path_or_buf='test_output.log', mode='a+')
@@ -81,12 +81,12 @@ class TestEgaugeAPI(unittest.TestCase):
         start_timestamp = pendulum.parse('2019-02-01T00:00:00.000-10:00')
         end_timestamp = pendulum.parse('2019-02-01T00:15:44.100-10:00')
         #insert start_timestamp into database_insertion_timestamp
-        sensor_row = orm_egauge.SensorInfo(sensor_id=self.sensor_id, sensor_type="egauge", purpose_id=1, sensor_part="Usage [kW]", last_updated_datetime=start_timestamp.subtract(seconds=60), is_active=True)
+        sensor_row = orm_egauge.SensorInfo(query_string=self.query_string, script_folder="egauge", purpose_id=1, data_sensor_info_mapping="Usage [kW]", last_updated_datetime=start_timestamp.subtract(seconds=60), is_active=True)
         conn.add(sensor_row)
         conn.commit()
         frozen_time = end_timestamp
         with freeze_time(time_to_freeze=frozen_time):
-            reading_dataframe, purpose_sensors = api_egauge.get_data_from_api(conn, self.sensor_id)
+            reading_dataframe, purpose_sensors = api_egauge.get_data_from_api(conn, self.query_string)
         index = pandas.Index(reading_dataframe['Date & Time'])
         print(index)
         # get the difference in minutes between the start and end time
