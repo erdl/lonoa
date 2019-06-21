@@ -33,7 +33,7 @@ class Project(BASE):
     project_folder_path = Column(String, primary_key=True)
 
 
-class Readings(BASE):
+class Reading(BASE):
     """
     This class represents the readings table
 
@@ -44,11 +44,11 @@ class Readings(BASE):
         purpose_id: unique id representing a purpose
         value: the numerical value of a reading
     """
-    __tablename__ = 'readings'
+    __tablename__ = 'reading'
 
     datetime = Column(TIMESTAMP, primary_key=True)
     purpose_id = Column(Integer, primary_key=True)
-    value = Column(DOUBLE_PRECISION)
+    reading = Column(DOUBLE_PRECISION)
     units = Column(String)
     upload_timestamp = Column(TIMESTAMP, default=func.now())
 
@@ -78,13 +78,20 @@ class SensorInfo(BASE):
         webctrl = "webctrl"
 
     purpose_id = Column(Integer, primary_key=True)
-    query_string = Column(String)
-    data_sensor_info_mapping = Column(String)
+    building = Column(String)
+    variable_name = Column(String)
+    unit = Column(String)
     type = Column(String)
+    appliance = Column(String)
+    room = Column(String)
+    surface = Column(String)
+    sample_resolution = Column(String)
+    query_string = Column(String)
+    note = Column(String)
+    data_sensor_info_mapping = Column(String)
     script_folder = Column(Enum(ScriptFolderEnum))
     is_active = Column(Boolean)
     last_updated_datetime = Column(TIMESTAMP)
-    unit = Column(String)
 
 
 class ErrorLog(BASE):
