@@ -147,7 +147,7 @@ def insert_readings_into_database(conn, readings, purpose_sensors):
                     column_name = columns[i+1]
                     # only insert column's reading if data_sensor_info_mapping matches column_name
                     if purpose_sensor.data_sensor_info_mapping == column_name:
-                        reading_row = orm_egauge.Readings(purpose_id=purpose_sensor.purpose_id, datetime=row_datetime, value=row_reading, units=purpose_sensor.unit)
+                        reading_row = orm_egauge.Reading(purpose_id=purpose_sensor.purpose_id, datetime=row_datetime, reading=row_reading, units=purpose_sensor.unit)
                         conn.add(reading_row)
                         rows_inserted += 1
                         new_last_updated_datetime = row_datetime
