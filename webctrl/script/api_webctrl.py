@@ -115,7 +115,7 @@ def insert_readings_into_database(conn, readings, sensor):
                 reading_value = reading[key]
         # subtract 10 hours from reading time for comparison because it's GMT and last_updated_datetime is GMT - 10
         if reading_time.subtract(hours=10) > pendulum.instance(sensor.last_updated_datetime):
-            reading_row = orm_webctrl.Readings(purpose_id=sensor.purpose_id, datetime=reading_time, value=reading_value, units=sensor.unit)
+            reading_row = orm_webctrl.Reading(purpose_id=sensor.purpose_id, datetime=reading_time, reading=reading_value, units=sensor.unit)
             conn.add(reading_row)
             rows_inserted += 1
             new_last_updated_datetime = reading_time
