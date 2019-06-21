@@ -112,8 +112,8 @@ def get_csv_from_folder_not_in_db(conn, csv_filename):
         conn.add(latest_csv_timestamp_row)
     # check if earliest and latest file_timestamps are already in db and set new_readings variable
     # assume that if first or last timestamps in csv were already inserted for that given timestamp and query_string, then all were already inserted
-    earliest_csv_timestamp_is_in_db = conn.query(orm_hobo.Readings).filter_by(datetime=earliest_csv_timestamp, purpose_id=sensor_info_rows[0].purpose_id).first()
-    latest_csv_timestamp_is_in_db = conn.query(orm_hobo.Readings).filter_by(datetime=latest_csv_timestamp, purpose_id=sensor_info_rows[0].purpose_id).first()
+    earliest_csv_timestamp_is_in_db = conn.query(orm_hobo.Reading).filter_by(datetime=earliest_csv_timestamp, purpose_id=sensor_info_rows[0].purpose_id).first()
+    latest_csv_timestamp_is_in_db = conn.query(orm_hobo.Reading).filter_by(datetime=latest_csv_timestamp, purpose_id=sensor_info_rows[0].purpose_id).first()
     if not earliest_csv_timestamp_is_in_db and not latest_csv_timestamp_is_in_db:
         new_readings = True
     return csv_readings, (new_readings, earliest_csv_timestamp, csv_modified_timestamp, query_string, latest_csv_timestamp, sensor_info_rows)
@@ -146,7 +146,7 @@ def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
     if rows_returned > 0:
         for csv_reading in csv_readings.itertuples():
             for i in range(0, len(sensor_info_rows)):
-                reading_row = orm_hobo.Readings(datetime=csv_reading[1], purpose_id=sensor_info_rows[i].purpose_id, value=csv_reading[i+2], units=sensor_info_rows[i].unit)
+                reading_row = orm_hobo.Reading(datetime=csv_reading[1], purpose_id=sensor_info_rows[i].purpose_id, reading=csv_reading[i+2], units=sensor_info_rows[i].unit)
                 conn.add(reading_row)
             last_reading_row_datetime = csv_reading[1]
     #update last_updated_datetime column for relevant rows in sensor_info table
