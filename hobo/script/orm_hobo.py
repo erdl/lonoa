@@ -7,34 +7,15 @@ from sqlalchemy import create_engine
 from sqlalchemy import Boolean, Column, Integer, String
 from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.types import Enum
 
 import configparser
 # import csv
+import enum
 import os
 
 # needs to be in the same scope as all ORM table classes because they are subclasses of declarative_base class
 BASE = declarative_base()
-
-
-class PipelineStage:
-    """
-    This class defines strings that could be inserted into error_log.pipeline_stage
-
-    Each string represents at what stage of the api script execution an error_log row was inserted
-        data_acquisition: obtaining readings from source
-        database_insertion: inserting new rows into readings table
-    """
-    data_acquisition = "data_acquisition"
-    database_insertion = "database_insertion"
-
-
-class SensorType:
-    """
-    This class defines strings that could be inserted into sensor_info.sensor_type
-    """
-    egauge = "egauge"
-    hobo = "hobo"
-    webctrl = "webctrl"
 
 
 class Project(BASE):
@@ -84,11 +65,19 @@ class SensorInfo(BASE):
     """
     __tablename__ = 'sensor_info'
 
+    class SensorTypeEnum(enum.Enum):
+        """
+        This class defines strings that could be inserted into sensor_info.sensor_type
+        """
+        egauge = "egauge"
+        hobo = "hobo"
+        webctrl = "webctrl"
+
     purpose_id = Column(Integer, primary_key=True)
     sensor_id = Column(String)
     data_sensor_info_mapping = Column(String)
     sensor_part = Column(String)
-    sensor_type = Column(String)
+    sensor_type = Column(Enum(SensorTypeEnum))
     is_active = Column(Boolean)
     last_updated_datetime = Column(TIMESTAMP)
     units = Column(String)
@@ -113,13 +102,24 @@ class ErrorLog(BASE):
     """
     __tablename__ = 'error_log'
 
+    class PipelineStageEnum(enum.Enum):
+        """
+        This class defines strings that could be inserted into error_log.pipeline_stage
+
+        Each string represents at what stage of the api script execution an error_log row was inserted
+            data_acquisition: obtaining readings from source
+            database_insertion: inserting new rows into readings table
+        """
+        data_acquisition = "data_acquisition"
+        database_insertion = "database_insertion"
+
     # the sqlalchemy orm requires a primary key in each table
     log_id = Column(Integer, primary_key=True)
     purpose_id = Column(Integer)
     datetime = Column(TIMESTAMP)
     status = Column(Boolean)
     error_type = Column(String)
-    pipeline_stage = Column(String)
+    pipeline_stage = Column(Enum(PipelineStageEnum))
 
 
 class ErrorLogDetails(BASE):
