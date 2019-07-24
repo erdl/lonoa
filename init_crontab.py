@@ -5,8 +5,8 @@ import sqlalchemy
 
 
 if __name__=='__main__':
-    #create a cron object; requires sudo if user running script is not locked_user
-    cron = crontab.CronTab(user='locked_user')
+    #create a cron object; requires sudo if user running script is not lonoa
+    cron = crontab.CronTab(user='lonoa')
 
     # get db connection
     config_path = "config.txt"

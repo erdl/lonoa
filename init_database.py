@@ -11,10 +11,6 @@ if __name__ == '__main__':
             raise TypeError
         db_name = sys.argv[1]
 
-        # The Linux user that will run api_...py and extract_...py scripts from the crontab
-        # Grant database and file permissions to this user.
-        locked_username = 'locked_user'
-
         # make sure working directory = parent directory of this file, then get full project folder path
         parent_directory = os.path.abspath(os.path.join(__file__, os.pardir))
         os.chdir(parent_directory)
