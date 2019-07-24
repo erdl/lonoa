@@ -5,8 +5,8 @@ import sqlalchemy
 
 
 if __name__=='__main__':
-    #create a cron object; requires sudo if user running script is not locked_user
-    cron = crontab.CronTab(user='locked_user')
+    #create a cron object; requires sudo if user running script is not lonoa
+    cron = crontab.CronTab(user='lonoa')
 
     # get db connection
     config_path = "config.txt"
@@ -39,6 +39,8 @@ if __name__=='__main__':
     print(__file__ + ': extracted active sensor types ', str(sensor_types), ' from database')
 
     for sensor_type in sensor_types:
+        #use ".value" to access value of sensor_type enum
+        sensor_type = sensor_type.value
         # hobo has a different script name
         if sensor_type == 'hobo':
             sensor_scriptname = 'extract_hobo.py'
