@@ -104,7 +104,7 @@ def get_data_from_api(conn, query_string):
         # readings.to_csv(path_or_buf=output_file, index=False, header=False, mode='a+')
         # # readings.to_csv(path_or_buf=output_file, mode='a+')
         for purpose_sensor in purpose_sensors:
-            error_log_row = orm_egauge.ErrorLog(purpose_id=purpose_sensor.purpose_id, datetime=current_time, status=True, pipeline_stage=orm_egauge.ErrorLog.PipelineStageEnum.data_acquisition)
+            error_log_row = orm_egauge.ErrorLog(purpose_id=purpose_sensor.purpose_id, datetime=current_time, was_success=True, pipeline_stage=orm_egauge.ErrorLog.PipelineStageEnum.data_acquisition)
             conn.add(error_log_row)
         conn.commit()
         return readings, purpose_sensors
@@ -153,7 +153,7 @@ def insert_readings_into_database(conn, readings, purpose_sensors):
                         new_last_updated_datetime = row_datetime
         if rows_inserted > 0:
             conn.query(orm_egauge.SensorInfo.purpose_id).filter(orm_egauge.SensorInfo.purpose_id == purpose_sensor.purpose_id).update({"last_updated_datetime": new_last_updated_datetime})
-        error_log_row = orm_egauge.ErrorLog(purpose_id=purpose_sensor.purpose_id, datetime=current_time, pipeline_stage=orm_egauge.ErrorLog.PipelineStageEnum.database_insertion, status=True)
+        error_log_row = orm_egauge.ErrorLog(purpose_id=purpose_sensor.purpose_id, datetime=current_time, pipeline_stage=orm_egauge.ErrorLog.PipelineStageEnum.database_insertion, was_success=True)
         conn.add(error_log_row)
         print(str(rows_inserted) + ' readings(s) attempted to be inserted by ' + SCRIPT_NAME)
     conn.commit()
@@ -166,7 +166,7 @@ def log_failure_to_connect_to_api(conn, exception, query_string):
     purpose_ids = [purpose_id[0] for purpose_id in conn.query(orm_egauge.SensorInfo.purpose_id).filter_by(query_string=query_string, is_active=True)]
     logging.exception('Egauge API data request error')
     for purpose_id in purpose_ids:
-        error_log_row = orm_egauge.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_egauge.ErrorLog.PipelineStageEnum.data_acquisition, purpose_id=purpose_id, status=False)
+        error_log_row = orm_egauge.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_egauge.ErrorLog.PipelineStageEnum.data_acquisition, purpose_id=purpose_id, was_success=False)
         conn.add(error_log_row)
         conn.commit()
 
@@ -178,7 +178,7 @@ def log_failure_to_connect_to_database(conn, exception, purpose_sensors):
     logging.exception('Egauge reading insertion error')
     conn.rollback()
     for purpose_sensor in purpose_sensors:
-        error_log_row = orm_egauge.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, purpose_id=purpose_sensor.purpose_id, pipeline_stage=orm_egauge.ErrorLog.PipelineStageEnum.database_insertion, status=False)
+        error_log_row = orm_egauge.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, purpose_id=purpose_sensor.purpose_id, pipeline_stage=orm_egauge.ErrorLog.PipelineStageEnum.database_insertion, was_success=False)
         conn.add(error_log_row)
         conn.commit()
 
