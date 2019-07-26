@@ -74,6 +74,8 @@ def get_data_from_api(conn, query_string):
     4. for each purpose_sensor use purpose_id from 1 to insert success or failure in error_log
     """
     current_time = pendulum.now('Pacific/Honolulu')
+    # truncate time to hundredths of a second
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     # The next lines of code before setting api_start_time used to be in their own function get_most_recent_timestamp_from_db()
     purpose_sensors = conn.query(orm_egauge.SensorInfo.purpose_id, orm_egauge.SensorInfo.data_sensor_info_mapping, orm_egauge.SensorInfo.last_updated_datetime, orm_egauge.SensorInfo.unit).\
         filter_by(query_string=query_string,is_active=True)
@@ -127,6 +129,7 @@ def insert_readings_into_database(conn, readings, purpose_sensors):
     9. commit database inserts and updates
     """
     current_time = pendulum.now('Pacific/Honolulu')
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     rows_returned = readings.shape[0]
     for purpose_sensor in purpose_sensors:
         # The reading time of the last row inserted into the reading table
@@ -140,6 +143,7 @@ def insert_readings_into_database(conn, readings, purpose_sensors):
             for row in readings.itertuples():
                 # appears that no timezone shifting needed but needs further testing
                 row_datetime = pendulum.from_timestamp(row[1])  # in_timezone('Pacific/Honolulu')
+                row_datetime = row_datetime.set(microsecond=row_datetime.microsecond - (row_datetime.microsecond % 10000))
                 # iterate through each column after "Date & Time"
                 for i, column_reading in enumerate(row[2:]):
                     row_reading = column_reading
@@ -147,7 +151,7 @@ def insert_readings_into_database(conn, readings, purpose_sensors):
                     column_name = columns[i+1]
                     # only insert column's reading if data_sensor_info_mapping matches column_name
                     if purpose_sensor.data_sensor_info_mapping == column_name:
-                        reading_row = orm_egauge.Reading(purpose_id=purpose_sensor.purpose_id, datetime=row_datetime, reading=row_reading, units=purpose_sensor.unit)
+                        reading_row = orm_egauge.Reading(purpose_id=purpose_sensor.purpose_id, datetime=row_datetime, reading=row_reading, units=purpose_sensor.unit, upload_timestamp=current_time)
                         conn.add(reading_row)
                         rows_inserted += 1
                         new_last_updated_datetime = row_datetime
@@ -162,6 +166,7 @@ def insert_readings_into_database(conn, readings, purpose_sensors):
 #log_failure_to_get_readings_from_egauge_api
 def log_failure_to_connect_to_api(conn, exception, query_string):
     current_time = pendulum.now('Pacific/Honolulu')
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     # get all purpose_ids associated with query_string
     purpose_ids = [purpose_id[0] for purpose_id in conn.query(orm_egauge.SensorInfo.purpose_id).filter_by(query_string=query_string, is_active=True)]
     logging.exception('Egauge API data request error')
@@ -175,6 +180,7 @@ def log_failure_to_connect_to_api(conn, exception, query_string):
 # need to continue testing if I should call conn.rollback() in this function
 def log_failure_to_connect_to_database(conn, exception, purpose_sensors):
     current_time = pendulum.now('Pacific/Honolulu')
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     logging.exception('Egauge reading insertion error')
     conn.rollback()
     for purpose_sensor in purpose_sensors:
