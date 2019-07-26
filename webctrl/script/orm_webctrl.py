@@ -107,7 +107,7 @@ class ErrorLog(BASE):
         log_id: uniquely identifies a row
         purpose_id: unique id representing a purpose
         datetime: when an api request or a reading insertion was attempted
-        status: boolean representing if api script ran successfully or not
+        was_success: boolean representing if api script ran successfully or not
         error_type: name of python exception caught; should remain empty if no exception was caught
         pipeline_stage: the stage of the api script execution when an error_log row was inserted
     """
@@ -128,7 +128,7 @@ class ErrorLog(BASE):
     log_id = Column(Integer, primary_key=True)
     purpose_id = Column(Integer)
     datetime = Column(TIMESTAMP)
-    status = Column(Boolean)
+    was_success = Column(Boolean)
     error_type = Column(String)
     pipeline_stage = Column(Enum(PipelineStageEnum))
 
