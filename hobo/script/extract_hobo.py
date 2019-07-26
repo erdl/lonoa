@@ -97,7 +97,7 @@ def get_csv_from_folder_not_in_db(conn, csv_filename):
     earliest_csv_timestamp = pendulum.instance(csv_readings.iloc[0]['Date Time, GMT-10:00'], 'Pacific/Honolulu')
     latest_csv_timestamp = pendulum.instance(csv_readings.iloc[csv_readings.shape[0]-1]['Date Time, GMT-10:00'], 'Pacific/Honolulu')
     for sensor_info_row in sensor_info_rows:
-        error_log_row = orm_hobo.ErrorLog(status=True, purpose_id=sensor_info_row.purpose_id, datetime=current_time, pipeline_stage=orm_hobo.ErrorLog.PipelineStageEnum.data_acquisition)
+        error_log_row = orm_hobo.ErrorLog(was_success=True, purpose_id=sensor_info_row.purpose_id, datetime=current_time, pipeline_stage=orm_hobo.ErrorLog.PipelineStageEnum.data_acquisition)
         conn.add(error_log_row)
         # need to flush and refresh to get error_log_row.log_id
         conn.flush()
@@ -154,7 +154,7 @@ def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
         # account for if csv files uploaded out of order by checking if last_reading_row_datetime is later than last_updated_datetime
         if not sensor_info_row.last_updated_datetime or sensor_info_row.last_updated_datetime < last_reading_row_datetime:
             conn.query(orm_hobo.SensorInfo.purpose_id).filter(orm_hobo.SensorInfo.purpose_id == sensor_info_row.purpose_id).update({"last_updated_datetime": last_reading_row_datetime})
-        error_log_row = orm_hobo.ErrorLog(status=True, purpose_id=sensor_info_row.purpose_id, datetime=current_time, pipeline_stage=orm_hobo.ErrorLog.PipelineStageEnum.database_insertion)
+        error_log_row = orm_hobo.ErrorLog(was_success=True, purpose_id=sensor_info_row.purpose_id, datetime=current_time, pipeline_stage=orm_hobo.ErrorLog.PipelineStageEnum.database_insertion)
         conn.add(error_log_row)
         # need to flush and refresh to get error_log_row.log_id
         conn.flush()
@@ -173,7 +173,7 @@ def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
 def log_failure_to_get_csv_readings_from_folder_not_in_db(conn, csv_filename, exception):
     current_time = pendulum.now('Pacific/Honolulu')
     logging.exception('log_failure_to_get_csv_readings_from_folder_not_in_db')
-    error_log_row = orm_hobo.ErrorLog(status=False, datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_hobo.ErrorLog.PipelineStageEnum.data_acquisition)
+    error_log_row = orm_hobo.ErrorLog(was_success=False, datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_hobo.ErrorLog.PipelineStageEnum.data_acquisition)
     conn.add(error_log_row)
     # need to flush and refresh to get error_log_row.log_id
     conn.flush()
@@ -190,12 +190,12 @@ def log_failure_to_insert_csv_readings_into_db(conn, csv_filename, csv_metadata,
     conn.rollback()
     logging.exception('log_failure_to_insert_csv_readings_into_db')
     for sensor_info_row in sensor_info_rows:
-        # set status to "" if readings were already inserted
+        # set was_success to "" if readings were already inserted
         if not new_readings:
             error_log_row = orm_hobo.ErrorLog(purpose_id=sensor_info_row.purpose_id, datetime=current_time, error_type=exception.__class__.__name__,pipeline_stage=orm_hobo.ErrorLog.PipelineStageEnum.database_insertion)
-        # set status to False if readings were new but an error was thrown
+        # set was_success to False if readings were new but an error was thrown
         else:
-            error_log_row = orm_hobo.ErrorLog(purpose_id=sensor_info_row.purpose_id, status=False, datetime=current_time, error_type=exception.__class__.__name__,  pipeline_stage=orm_hobo.ErrorLog.PipelineStageEnum.database_insertion)
+            error_log_row = orm_hobo.ErrorLog(purpose_id=sensor_info_row.purpose_id, was_success=False, datetime=current_time, error_type=exception.__class__.__name__,  pipeline_stage=orm_hobo.ErrorLog.PipelineStageEnum.database_insertion)
         conn.add(error_log_row)
         # need to flush and refresh to get error_log_row.log_id
         conn.flush()
