@@ -1,0 +1,8 @@
+freezegun==0.3.10  #new
+pandas==0.20.2
+pendulum==2.0.3   #new
+psycopg2==2.7.1
+python-crontab==2.3.6   #new
+requests==2.9.1
+SQLAlchemy==1.1.10
+urllib3==1.13.1
