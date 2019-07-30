@@ -5,11 +5,11 @@ and functions relating to those tables
 """
 from pathlib import Path #used to read config.txt in parent directory
 from sqlalchemy import create_engine
-from sqlalchemy import Boolean, Column, Integer, String
+from sqlalchemy import BigInteger, Boolean, Column, Integer, String
 from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
-# from sqlalchemy.schema import ForeignKey
+from sqlalchemy.schema import ForeignKey
 from sqlalchemy.types import Enum
 
 import configparser
@@ -48,10 +48,10 @@ class Reading(BASE):
     __tablename__ = 'reading'
 
     datetime = Column(TIMESTAMP, primary_key=True)
-    purpose_id = Column(Integer, primary_key=True)
-    units = Column(String)
-    reading = Column(DOUBLE_PRECISION)
-    upload_timestamp = Column(TIMESTAMP, default=func.now())
+    purpose_id = Column(BigInteger, ForeignKey('sensor_info.purpose_id'), primary_key=True)
+    units = Column(String(length=255), nullable=False)
+    reading = Column(DOUBLE_PRECISION, nullable=False)
+    upload_timestamp = Column(TIMESTAMP, default=func.now(), nullable=False)
 
 
 class SensorInfo(BASE):
@@ -79,16 +79,16 @@ class SensorInfo(BASE):
         webctrl = "webctrl"
 
     purpose_id = Column(Integer, primary_key=True)
-    building = Column(String)
-    variable_name = Column(String)
-    unit = Column(String)
-    type = Column(String)
-    appliance = Column(String)
-    room = Column(String)
-    surface = Column(String)
-    sample_resolution = Column(String)
-    query_string = Column(String)
-    note = Column(String)
+    building = Column(String(length=50))
+    variable_name = Column(String(length=50))
+    unit = Column(String(length=20))
+    type = Column(String(length=50))
+    appliance = Column(String(length=30))
+    room = Column(String(length=30))
+    surface = Column(String(length=50))
+    sample_resolution = Column(String(length=20))
+    query_string = Column(String(length=255))
+    note = Column(String(length=255))
     data_sensor_info_mapping = Column(String)
     script_folder = Column(Enum(ScriptFolderEnum))
     is_active = Column(Boolean)
