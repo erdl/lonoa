@@ -44,6 +44,7 @@ def get_csv_from_folder_not_in_db(conn, csv_filename):
     Checks if the timestamp of the earliest and latest rows in dataframe are already in db for a given query_string
     """
     current_time = pendulum.now('Pacific/Honolulu')
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     #assume there are no new readings by default
     new_readings = False
     with open(csv_filename, 'r') as file:
@@ -128,6 +129,7 @@ def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
     Use csv_metadata
     """
     current_time = pendulum.now('Pacific/Honolulu')
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     #useful if main does not use continue
     #check if csv_readings was initialized as a dataframe
     if isinstance(csv_readings, pandas.DataFrame):
@@ -146,7 +148,7 @@ def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
     if rows_returned > 0:
         for csv_reading in csv_readings.itertuples():
             for i in range(0, len(sensor_info_rows)):
-                reading_row = orm_hobo.Reading(datetime=csv_reading[1], purpose_id=sensor_info_rows[i].purpose_id, reading=csv_reading[i+2], units=sensor_info_rows[i].unit)
+                reading_row = orm_hobo.Reading(datetime=csv_reading[1], purpose_id=sensor_info_rows[i].purpose_id, reading=csv_reading[i+2], units=sensor_info_rows[i].unit, upload_timestamp=current_time)
                 conn.add(reading_row)
             last_reading_row_datetime = csv_reading[1]
     #update last_updated_datetime column for relevant rows in sensor_info table
@@ -172,6 +174,7 @@ def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
 
 def log_failure_to_get_csv_readings_from_folder_not_in_db(conn, csv_filename, exception):
     current_time = pendulum.now('Pacific/Honolulu')
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     logging.exception('log_failure_to_get_csv_readings_from_folder_not_in_db')
     error_log_row = orm_hobo.ErrorLog(was_success=False, datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_hobo.ErrorLog.PipelineStageEnum.data_acquisition)
     conn.add(error_log_row)
@@ -185,6 +188,7 @@ def log_failure_to_get_csv_readings_from_folder_not_in_db(conn, csv_filename, ex
 
 def log_failure_to_insert_csv_readings_into_db(conn, csv_filename, csv_metadata, exception):
     current_time = pendulum.now('Pacific/Honolulu')
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     new_readings, earliest_csv_timestamp, csv_modified_timestamp, query_string, latest_csv_timestamp, sensor_info_rows = csv_metadata
     #rollback any reading insertions during that iteration of for loop in main
     conn.rollback()
