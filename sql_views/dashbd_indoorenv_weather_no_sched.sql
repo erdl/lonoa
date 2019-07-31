@@ -1,0 +1,66 @@
+-- union of dashboard-union_individual, view-indoor-envir, view_weather_only
+-- [used by dashbd_indoor_envir_weather_sched]
+CREATE VIEW dashbd_indoorenv_weather_no_sched AS 
+
+ SELECT "dashboard-union_individual".datetime,
+    "dashboard-union_individual".building,
+    'Power-avg (kw)'::character varying AS type,
+    "dashboard-union_individual".appliance,
+    NULL::character varying AS room,
+    NULL::character varying AS surface,
+    NULL::double precision AS "Humidity (%)",
+    NULL::double precision AS "Temperature (F)",
+    NULL::double precision AS "Temperature (C)",
+    NULL::double precision AS "Light (lux)",
+    NULL::double precision AS "CO2 (ppm)",
+    NULL::double precision AS "Window",
+    "dashboard-union_individual"."Power Avg (kW)",
+    NULL::double precision AS "Solar radiation (w/m2)",
+    NULL::double precision AS "Wind speed (m/s)",
+    NULL::double precision AS "Wind direction (deg)",
+    NULL::double precision AS "Barometric pressure (hPa)",
+    NULL::double precision AS "Dewpoint (C)",
+    NULL::double precision AS "Dewpoint (F)"
+   FROM kat."dashboard-union_individual"
+UNION
+ SELECT "view-indoor-envir".datetime,
+    "view-indoor-envir".building,
+    "view-indoor-envir".type,
+    NULL::character varying AS appliance,
+    "view-indoor-envir".room,
+    "view-indoor-envir".surface,
+    "view-indoor-envir"."Humidity (%)",
+    "view-indoor-envir"."Temperature (F)",
+    ("view-indoor-envir"."Temperature (F)" - 32::double precision) * 5::double precision / 9::double precision AS "Temperature (C)",
+    "view-indoor-envir"."Light (lux)",
+    "view-indoor-envir"."CO2 (ppm)",
+    "view-indoor-envir"."Window",
+    NULL::double precision AS "Power Avg (kW)",
+    NULL::double precision AS "Solar radiation (w/m2)",
+    NULL::double precision AS "Wind speed (m/s)",
+    NULL::double precision AS "Wind direction (deg)",
+    NULL::double precision AS "Barometric pressure (hPa)",
+    NULL::double precision AS "Dewpoint (C)",
+    NULL::double precision AS "Dewpoint (F)"
+   FROM "view-indoor-envir"
+UNION
+ SELECT view_weather_only.datetime,
+    view_weather_only.building,
+    view_weather_only.type,
+    NULL::character varying AS appliance,
+    NULL::character varying AS room,
+    NULL::character varying AS surface,
+    view_weather_only."Humidity (%)",
+    view_weather_only."Temperature (F)",
+    view_weather_only."Temperature (C)",
+    NULL::double precision AS "Light (lux)",
+    NULL::double precision AS "CO2 (ppm)",
+    NULL::double precision AS "Window",
+    NULL::double precision AS "Power Avg (kW)",
+    view_weather_only."Solar radiation (w/m2)",
+    view_weather_only."Wind speed (m/s)",
+    view_weather_only."Wind direction (deg)",
+    view_weather_only."Barometric pressure (hPa)",
+    view_weather_only."Dewpoint (C)",
+    view_weather_only."Dewpoint (F)"
+   FROM view_weather_only;
