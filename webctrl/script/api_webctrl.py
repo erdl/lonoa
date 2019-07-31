@@ -45,16 +45,17 @@ def get_db_handler():
 
 
 # returns the last_updated_datetime and the readings after a successful api call
-#def get_readings_from_webctrl_api(conn, sensor_id):
+#def get_readings_from_webctrl_api(conn, query_string):
 def get_data_from_api(sensor, conn):
     """
-    1. build webctrl api request using sensor.sensor_id and sensor.last_updated_datetime from sensor_info table
+    1. build webctrl api request using sensor.query_string and sensor.last_updated_datetime from sensor_info table
     2. send request to webctrl api and attempt to download the readings data
 
     3. generate timestamp of data request
-    4. use sensor.purpose_id to insert success or failure status in error_log
+    4. use sensor.purpose_id to insert success or failure was_success in error_log
     """
     current_time = pendulum.now('Pacific/Honolulu')
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     # if no timestamp is found, raise exception
     if not sensor.last_updated_datetime:
         raise Exception('No last_updated_datetime found')
@@ -70,12 +71,12 @@ def get_data_from_api(sensor, conn):
     if start_date > end_date:
         raise ValueError('Error: start_date ' + start_date + ' was later than end_date ' + end_date)
     output_format = 'json'
-    params = {'id': sensor.sensor_id, 'start': start_date, 'end': end_date, 'format': output_format}
+    params = {'id': sensor.query_string, 'start': start_date, 'end': end_date, 'format': output_format}
     auth = (api_user, api_pass)
     readings = requests.post(host, params=params, auth=tuple(auth))
     if readings.status_code == requests.codes.ok:
         print('API request was successful' + str(readings))
-        error_log_row = orm_webctrl.ErrorLog(datetime=current_time, status=True, purpose_id=sensor.purpose_id, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.data_acquisition)
+        error_log_row = orm_webctrl.ErrorLog(datetime=current_time, was_success=True, purpose_id=sensor.purpose_id, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.data_acquisition)
         conn.add(error_log_row)
         conn.commit()
         return readings
@@ -94,10 +95,11 @@ def insert_readings_into_database(conn, readings, sensor):
     5. use purpose_id to insert success or failure of data insert attempt during step 1
     """
     current_time = pendulum.now('Pacific/Honolulu')
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     new_last_updated_datetime = ''
     rows_inserted = 0
     sensor_json_data = readings.json()
-    # sensor_id = sensor_json_data[0]['id']
+    # query_string = sensor_json_data[0]['id']
     readings = sensor_json_data[0]['s']
     #TEST
     print(str(len(readings)) + ' readings obtained', )
@@ -109,13 +111,14 @@ def insert_readings_into_database(conn, readings, sensor):
                 reading_timestamp = reading[key]
                 # slice off extra digits since pendulum.from_timestamp() uses 10 digit timestamps
                 reading_time = pendulum.from_timestamp(int(str(reading_timestamp)[:10]))
+                reading_time = reading_time.set(microsecond=reading_time.microsecond - (reading_time.microsecond % 10000))
             #'a' type values stand for analog; are like double datatypes
             #'d' type values stand for digital; are like booleans
             elif key is 'a' or key is 'd':
                 reading_value = reading[key]
         # subtract 10 hours from reading time for comparison because it's GMT and last_updated_datetime is GMT - 10
         if reading_time.subtract(hours=10) > pendulum.instance(sensor.last_updated_datetime):
-            reading_row = orm_webctrl.Readings(purpose_id=sensor.purpose_id, datetime=reading_time, value=reading_value, units=sensor.units)
+            reading_row = orm_webctrl.Reading(purpose_id=sensor.purpose_id, datetime=reading_time, reading=reading_value, units=sensor.unit, upload_timestamp=current_time)
             conn.add(reading_row)
             rows_inserted += 1
             new_last_updated_datetime = reading_time
@@ -125,7 +128,7 @@ def insert_readings_into_database(conn, readings, sensor):
     if new_last_updated_datetime:
         conn.query(orm_webctrl.SensorInfo).filter(orm_webctrl.SensorInfo.purpose_id == sensor.purpose_id).update(
             {"last_updated_datetime": new_last_updated_datetime})
-    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, status=True, purpose_id=sensor.purpose_id, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.database_insertion)
+    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, was_success=True, purpose_id=sensor.purpose_id, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.database_insertion)
     conn.add(error_log_row)
     conn.commit()
     print(rows_inserted, ' row(s) inserted')
@@ -134,8 +137,9 @@ def insert_readings_into_database(conn, readings, sensor):
 #log_failure_to_get_readings_from_webctrl_api
 def log_failure_to_connect_to_api(conn, exception, sensor):
     current_time = pendulum.now('Pacific/Honolulu')
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     logging.exception('log_failure_to_connect_to_api')
-    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.data_acquisition, purpose_id=sensor.purpose_id, status=False)
+    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.data_acquisition, purpose_id=sensor.purpose_id, was_success=False)
     conn.add(error_log_row)
     conn.commit()
 
@@ -145,8 +149,9 @@ def log_failure_to_connect_to_database(conn, exception, sensor):
     # rollback any db statements in conn to maintain atomicity of db insertions and updates at the purpose id level
     conn.rollback()
     current_time = pendulum.now('Pacific/Honolulu')
+    current_time = current_time.set(microsecond=current_time.microsecond - (current_time.microsecond % 10000))
     logging.exception('log_failure_to_connect_to_database')
-    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.database_insertion, purpose_id=sensor.purpose_id, status=False)
+    error_log_row = orm_webctrl.ErrorLog(datetime=current_time, error_type=exception.__class__.__name__, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.database_insertion, purpose_id=sensor.purpose_id, was_success=False)
     conn.add(error_log_row)
     conn.commit()
 
@@ -154,7 +159,7 @@ def log_failure_to_connect_to_database(conn, exception, sensor):
 if __name__ == '__main__':
     # connect to the database
     conn = get_db_handler()
-    sensors = conn.query(orm_webctrl.SensorInfo.purpose_id, orm_webctrl.SensorInfo.sensor_id, orm_webctrl.SensorInfo.last_updated_datetime, orm_webctrl.SensorInfo.units).filter_by(sensor_type=orm_webctrl.SensorInfo.SensorTypeEnum.webctrl, is_active=True)
+    sensors = conn.query(orm_webctrl.SensorInfo.purpose_id, orm_webctrl.SensorInfo.query_string, orm_webctrl.SensorInfo.last_updated_datetime, orm_webctrl.SensorInfo.unit).filter_by(script_folder=orm_webctrl.SensorInfo.ScriptFolderEnum.webctrl, is_active=True)
     for sensor in sensors:
         try:
             readings = get_data_from_api(sensor, conn)

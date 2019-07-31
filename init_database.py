@@ -56,6 +56,12 @@ if __name__ == '__main__':
             conn.add(project_row)
         else:
             print(__file__ + ': project_folder_path ' + project_folder_path + ' already exists in project table')
+        #cast timestamp fields to timestamp(6) to limit timestamp precision to the hundredth second
+        conn.execute('ALTER TABLE reading ALTER COLUMN datetime TYPE timestamp(6);')
+        conn.execute('ALTER TABLE reading ALTER COLUMN upload_timestamp TYPE timestamp(6);')
+        conn.execute('ALTER TABLE reading ALTER COLUMN upload_timestamp SET DEFAULT NOW();')
+        conn.execute('ALTER TABLE sensor_info ALTER COLUMN last_updated_datetime TYPE timestamp(6);')
+        conn.execute('ALTER TABLE error_log ALTER COLUMN datetime TYPE timestamp(6);')
         conn.commit()
         conn.close()
 

@@ -4,10 +4,10 @@ and functions relating to those tables
 """
 from pathlib import Path #used to read config.txt in parent directory
 from sqlalchemy import create_engine
-from sqlalchemy import Boolean, Column, Integer, String
+from sqlalchemy import BigInteger, Boolean, Column, Integer, String
 from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
-# from sqlalchemy.schema import ForeignKey
+from sqlalchemy.schema import ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.types import Enum
 
@@ -33,7 +33,7 @@ class Project(BASE):
     project_folder_path = Column(String, primary_key=True)
 
 
-class Readings(BASE):
+class Reading(BASE):
     """
     This class represents the readings table
 
@@ -44,13 +44,13 @@ class Readings(BASE):
         purpose_id: unique id representing a purpose
         value: the numerical value of a reading
     """
-    __tablename__ = 'readings'
+    __tablename__ = 'reading'
 
     datetime = Column(TIMESTAMP, primary_key=True)
-    purpose_id = Column(Integer, primary_key=True)
-    value = Column(DOUBLE_PRECISION)
-    units = Column(String)
-    upload_timestamp = Column(TIMESTAMP, default=func.now())
+    purpose_id = Column(BigInteger, ForeignKey('sensor_info.purpose_id'), primary_key=True)
+    units = Column(String(length=255), nullable=False)
+    reading = Column(DOUBLE_PRECISION, nullable=False)
+    upload_timestamp = Column(TIMESTAMP, default=func.now(), nullable=False)
 
 
 class SensorInfo(BASE):
@@ -59,17 +59,17 @@ class SensorInfo(BASE):
 
     Columns:
         purpose_id: uniquely identifies a purpose
-        sensor_id: string used in egauge and webctrl API requests; hobo sensor serial number; one sensor_id may have multiple purposes (egauge)
+        query_string: string used in egauge and webctrl API requests; hobo sensor serial number; one query_string may have multiple purposes (egauge)
         data_sensor_info_mapping: matches full column name in raw data (egauge api data, hobo csv's, etc)
-        sensor_part: string that represents one column name in data from a sensor if one row of data has multiple readings
-        sensor_type: string representing source of readings; e.g. egauge, webctrl, hobo
+        type: string that represents one column name in data from a sensor if one row of data has multiple readings
+        script_folder: string representing source of readings; e.g. egauge, webctrl, hobo
         is_active: boolean representing if script can request data from a sensor
         last_updated_datetime: used to keep track of datetime of last successfully inserted reading
-        units: unit of readings
+        unit: unit of readings
     """
     __tablename__ = 'sensor_info'
 
-    class SensorTypeEnum(enum.Enum):
+    class ScriptFolderEnum(enum.Enum):
         """
         This class defines strings that could be inserted into sensor_info.sensor_type
         """
@@ -78,13 +78,20 @@ class SensorInfo(BASE):
         webctrl = "webctrl"
 
     purpose_id = Column(Integer, primary_key=True)
-    sensor_id = Column(String)
+    building = Column(String(length=50))
+    variable_name = Column(String(length=50))
+    unit = Column(String(length=20))
+    type = Column(String(length=50))
+    appliance = Column(String(length=30))
+    room = Column(String(length=30))
+    surface = Column(String(length=50))
+    sample_resolution = Column(String(length=20))
+    query_string = Column(String(length=255))
+    note = Column(String(length=255))
     data_sensor_info_mapping = Column(String)
-    sensor_part = Column(String)
-    sensor_type = Column(Enum(SensorTypeEnum))
+    script_folder = Column(Enum(ScriptFolderEnum))
     is_active = Column(Boolean)
     last_updated_datetime = Column(TIMESTAMP)
-    units = Column(String)
 
 
 class ErrorLog(BASE):
@@ -100,7 +107,7 @@ class ErrorLog(BASE):
         log_id: uniquely identifies a row
         purpose_id: unique id representing a purpose
         datetime: when an api request or a reading insertion was attempted
-        status: boolean representing if api script ran successfully or not
+        was_success: boolean representing if api script ran successfully or not
         error_type: name of python exception caught; should remain empty if no exception was caught
         pipeline_stage: the stage of the api script execution when an error_log row was inserted
     """
@@ -121,7 +128,7 @@ class ErrorLog(BASE):
     log_id = Column(Integer, primary_key=True)
     purpose_id = Column(Integer)
     datetime = Column(TIMESTAMP)
-    status = Column(Boolean)
+    was_success = Column(Boolean)
     error_type = Column(String)
     pipeline_stage = Column(Enum(PipelineStageEnum))
 
