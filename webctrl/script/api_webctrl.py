@@ -89,7 +89,6 @@ def insert_readings_into_database(conn, readings, sensor):
     """
     1. for each row of data, attempt to insert into readings table if datetime of row is after sensor.last_updated_datetime
         2. keep track of the latest last_updated_datetime in new_last_updated_datetime
-
     3. Use new_last_updated_datetime to update last_updated_datetime of current sensor in sensor_info
     4. generate timestamp of data insert attempt
     5. use purpose_id to insert success or failure of data insert attempt during step 1
@@ -103,6 +102,7 @@ def insert_readings_into_database(conn, readings, sensor):
     readings = sensor_json_data[0]['s']
     #TEST
     print(str(len(readings)) + ' readings obtained', )
+    previous_reading_time = 0
     for reading in readings:
         reading_time = ''
         reading_value = ''
@@ -118,10 +118,13 @@ def insert_readings_into_database(conn, readings, sensor):
                 reading_value = reading[key]
         # subtract 10 hours from reading time for comparison because it's GMT and last_updated_datetime is GMT - 10
         if reading_time.subtract(hours=10) > pendulum.instance(sensor.last_updated_datetime):
+        if reading_time > pendulum.instance(sensor.last_updated_datetime, tz='Pacific/Honolulu') and reading_time != previous_reading_time:
             reading_row = orm_webctrl.Reading(purpose_id=sensor.purpose_id, datetime=reading_time, reading=reading_value, units=sensor.unit, upload_timestamp=current_time)
             conn.add(reading_row)
             rows_inserted += 1
             new_last_updated_datetime = reading_time
+            previous_reading_time = reading_time
+
     # #TEST
     # with open("output.txt", 'w') as outfile:
     #     json.dump(sensor_json_data, outfile, indent=4)
