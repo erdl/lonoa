@@ -159,6 +159,14 @@ def insert_readings_into_database(conn, readings, purpose_sensors):
             conn.query(orm_egauge.SensorInfo.purpose_id).filter(orm_egauge.SensorInfo.purpose_id == purpose_sensor.purpose_id).update({"last_updated_datetime": new_last_updated_datetime})
         error_log_row = orm_egauge.ErrorLog(purpose_id=purpose_sensor.purpose_id, datetime=current_time, pipeline_stage=orm_egauge.ErrorLog.PipelineStageEnum.database_insertion, was_success=True)
         conn.add(error_log_row)
+        # need to flush and refresh to get error_log_row.log_id
+        conn.flush()
+        conn.refresh(error_log_row)
+        # update current set of readings with related log_id
+        conn.query(orm_egauge.Reading.log_id).\
+            filter(orm_egauge.Reading.purpose_id == purpose_sensor.purpose_id,
+                   orm_egauge.Reading.upload_timestamp == current_time).\
+            update({'log_id':error_log_row.log_id})
         print(str(rows_inserted) + ' readings(s) attempted to be inserted by ' + SCRIPT_NAME)
     conn.commit()
 
