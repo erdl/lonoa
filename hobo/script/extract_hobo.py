@@ -169,6 +169,11 @@ def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
         conn.add(earliest_csv_timestamp_row)
         latest_csv_timestamp_row = orm_hobo.ErrorLogDetails(log_id=error_log_row.log_id, information_type="latest_csv_timestamp", information_value=latest_csv_timestamp)
         conn.add(latest_csv_timestamp_row)
+        # update current sensor_info_row's set of readings with related log_id
+        conn.query(orm_hobo.Reading.log_id).\
+            filter(orm_hobo.Reading.purpose_id == sensor_info_row.purpose_id,
+                   orm_hobo.Reading.upload_timestamp == current_time).\
+            update({'log_id': error_log_row.log_id})
     conn.commit()
 
 
