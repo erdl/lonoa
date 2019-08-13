@@ -51,6 +51,7 @@ class Reading(BASE):
     units = Column(String(length=255), nullable=False)
     reading = Column(DOUBLE_PRECISION, nullable=False)
     upload_timestamp = Column(TIMESTAMP, default=func.now(), nullable=False)
+    log_id = Column(Integer, ForeignKey('error_log.log_id'))
 
 
 class SensorInfo(BASE):
