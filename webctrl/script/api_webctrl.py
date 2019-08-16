@@ -130,6 +130,14 @@ def insert_readings_into_database(conn, readings, sensor):
             {"last_updated_datetime": new_last_updated_datetime})
     error_log_row = orm_webctrl.ErrorLog(datetime=current_time, was_success=True, purpose_id=sensor.purpose_id, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.database_insertion)
     conn.add(error_log_row)
+    # need to flush and refresh to get error_log_row.log_id
+    conn.flush()
+    conn.refresh(error_log_row)
+    # update current set of readings with related log_id
+    conn.query(orm_webctrl.Reading.log_id). \
+        filter(orm_webctrl.Reading.purpose_id == sensor.purpose_id,
+               orm_webctrl.Reading.upload_timestamp == current_time). \
+        update({'log_id': error_log_row.log_id})
     conn.commit()
     print(rows_inserted, ' row(s) inserted')
 
