@@ -157,11 +157,12 @@ class ApiAuthentication(BASE):
     """
     User info for authentication
 
-    Currently used to connect to webctrl api
+    Used when connecting to api's like webctrl
     """
     __tablename__ = 'api_authentication'
 
     user_id = Column(Integer, primary_key=True)
+    script_folder = Column(Enum(SensorInfo.ScriptFolderEnum))
     username = Column(String)
     password = Column(String)
 

@@ -60,7 +60,7 @@ def get_data_from_api(sensor, conn):
     if not sensor.last_updated_datetime:
         raise Exception('No last_updated_datetime found')
     #get webctrl user information
-    webctrl_user_row = conn.query(orm_webctrl.ApiAuthentication.username, orm_webctrl.ApiAuthentication.password).first()
+    webctrl_user_row = conn.query(orm_webctrl.ApiAuthentication.username, orm_webctrl.ApiAuthentication.password).filter_by(script_folder=orm_webctrl.SensorInfo.ScriptFolderEnum.webctrl)[0]
     # returns a TypeError if there are no users in database
     api_user = webctrl_user_row[0]
     api_pass = webctrl_user_row[1]
