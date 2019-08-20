@@ -10,15 +10,41 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # import json #used if we want to output json file
+import argparse
 import configparser
 import logging
+import logging.handlers
 import orm_webctrl
 import os
 import pendulum
 import requests
 
 
-logging.basicConfig(filename='error.log', format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+SCRIPT_NAME = os.path.basename(__file__)
+# parser for script arguments
+parser = argparse.ArgumentParser(description='Get reading data from egauge api and insert into database.')
+#--verbose argument is True if set
+parser.add_argument('-v', '--verbose', action='store_true',
+                    help='print INFO level log messages to console and error.log')
+args = parser.parse_args()
+
+# set log level to INFO only if verbose is set
+if args.verbose:
+    log_level = 'INFO'
+else:
+    log_level = 'ERROR'
+
+# configure logger which will print log messages to console (only prints ERROR level messages by default; prints INFO level messages if --verbose flag is set)
+logging.basicConfig(level=log_level, format=__file__+': %(message)s')
+
+# Create a handler that writes log messages to error.log file
+# rotates error.log every time it reaches 100 MB to limit space usage; keeps up to 5 old error.log files
+rotating_file_handler = logging.handlers.RotatingFileHandler('error.log', maxBytes=100000000, backupCount=5)
+# set the message and date format of file handler
+formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+rotating_file_handler.setFormatter(formatter)
+# add the handler to the root logger
+logging.getLogger('').addHandler(rotating_file_handler)
 
 
 # connect to database by creating a session
@@ -60,8 +86,8 @@ def get_data_from_api(sensor, conn):
     if not sensor.last_updated_datetime:
         raise Exception('No last_updated_datetime found')
     #get webctrl user information
+    #returns an IndexError if there is no webctrl user in database
     webctrl_user_row = conn.query(orm_webctrl.ApiAuthentication.username, orm_webctrl.ApiAuthentication.password).filter_by(script_folder=orm_webctrl.SensorInfo.ScriptFolderEnum.webctrl)[0]
-    # returns a TypeError if there are no users in database
     api_user = webctrl_user_row[0]
     api_pass = webctrl_user_row[1]
     host = 'http://www.soest.hawaii.edu/hneienergy/bulktrendserver/read'
@@ -75,7 +101,7 @@ def get_data_from_api(sensor, conn):
     auth = (api_user, api_pass)
     readings = requests.post(host, params=params, auth=tuple(auth))
     if readings.status_code == requests.codes.ok:
-        print('API request was successful' + str(readings))
+        logging.info('[' + str(current_time) + '] ' + 'Data acquisition API request was successful for ' + sensor.query_string)
         error_log_row = orm_webctrl.ErrorLog(datetime=current_time, was_success=True, purpose_id=sensor.purpose_id, pipeline_stage=orm_webctrl.ErrorLog.PipelineStageEnum.data_acquisition)
         conn.add(error_log_row)
         conn.commit()
@@ -101,8 +127,7 @@ def insert_readings_into_database(conn, readings, sensor):
     sensor_json_data = readings.json()
     # query_string = sensor_json_data[0]['id']
     readings = sensor_json_data[0]['s']
-    #TEST
-    print(str(len(readings)) + ' readings obtained', )
+    logging.info(str(len(readings)) + ' reading(s) obtained', )
     # reset this value (used to detect readings with duplicate timestamps) before start of reading insertion for loop
     previous_reading_time = 0
     for reading in readings:
@@ -148,7 +173,7 @@ def insert_readings_into_database(conn, readings, sensor):
                orm_webctrl.Reading.upload_timestamp == current_time). \
         update({'log_id': error_log_row.log_id})
     conn.commit()
-    print(rows_inserted, ' row(s) inserted')
+    logging.info(str(rows_inserted) + ' row(s) inserted for purpose_id ' + str(sensor.purpose_id))
 
 
 #log_failure_to_get_readings_from_webctrl_api
