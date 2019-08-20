@@ -11,8 +11,10 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import argparse
 import configparser
 import logging
+import logging.handlers
 import orm_egauge
 import os
 import pandas
@@ -23,7 +25,30 @@ import requests
 
 
 SCRIPT_NAME = os.path.basename(__file__)
-logging.basicConfig(filename='error.log', format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+# parser for script arguments
+parser = argparse.ArgumentParser(description='Get reading data from egauge api and insert into database.')
+#--verbose argument is True if set
+parser.add_argument('-v', '--verbose', action='store_true',
+                    help='print INFO level log messages to console and error.log')
+args = parser.parse_args()
+
+# set log level to INFO only if verbose is set
+if args.verbose:
+    log_level = 'INFO'
+else:
+    log_level = 'ERROR'
+
+# configure logger which will print log messages to console (only prints ERROR level messages by default; prints INFO level messages if --verbose flag is set)
+logging.basicConfig(level=log_level, format=__file__+': %(message)s')
+
+# Create a handler that writes log messages to error.log file
+# rotates error.log every time it reaches 100 MB to limit space usage; keeps up to 5 old error.log files
+rotating_file_handler = logging.handlers.RotatingFileHandler('error.log', maxBytes=100000000, backupCount=5)
+# set the message and date format of file handler
+formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+rotating_file_handler.setFormatter(formatter)
+# add the handler to the root logger
+logging.getLogger('').addHandler(rotating_file_handler)
 
 
 # connect to database by creating a session
@@ -99,7 +124,7 @@ def get_data_from_api(conn, query_string):
     time_window = {'t': api_start_timestamp, 'f': current_timestamp}
     request = requests.get(host, params=time_window)
     if request.status_code == requests.codes.ok:
-        print('[' + str(current_time) + '] ' + 'Request was successful' + str(request))
+        logging.info('[' + str(current_time) + '] ' + 'Data acquisition API request was successful for ' + query_string)
         readings = pandas.read_csv(StringIO(request.text))
         readings = readings.sort_values(by='Date & Time')
         # # Set header=False if we don't want to append header and set index=False to remove index column.
@@ -167,7 +192,7 @@ def insert_readings_into_database(conn, readings, purpose_sensors):
             filter(orm_egauge.Reading.purpose_id == purpose_sensor.purpose_id,
                    orm_egauge.Reading.upload_timestamp == current_time).\
             update({'log_id':error_log_row.log_id})
-        print(str(rows_inserted) + ' readings(s) attempted to be inserted by ' + SCRIPT_NAME)
+        logging.info(str(rows_inserted) + ' readings(s) attempted to be inserted by ' + SCRIPT_NAME + ' for purpose id ' + str(purpose_sensor.purpose_id))
     conn.commit()
 
 
