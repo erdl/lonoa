@@ -25,30 +25,38 @@ import requests
 
 
 SCRIPT_NAME = os.path.basename(__file__)
-# parser for script arguments
-parser = argparse.ArgumentParser(description='Get reading data from egauge api and insert into database.')
-#--verbose argument is True if set
-parser.add_argument('-v', '--verbose', action='store_true',
-                    help='print INFO level log messages to console and error.log')
-args = parser.parse_args()
 
-# set log level to INFO only if verbose is set
-if args.verbose:
-    log_level = 'INFO'
-else:
-    log_level = 'ERROR'
 
-# configure logger which will print log messages to console (only prints ERROR level messages by default; prints INFO level messages if --verbose flag is set)
-logging.basicConfig(level=log_level, format=__file__+': %(message)s')
+def set_logging_settings():
+    """
+    Sets logging to write ERROR messages by default to ./error.log and standard output
 
-# Create a handler that writes log messages to error.log file
-# rotates error.log every time it reaches 100 MB to limit space usage; keeps up to 5 old error.log files
-rotating_file_handler = logging.handlers.RotatingFileHandler('error.log', maxBytes=100000000, backupCount=5)
-# set the message and date format of file handler
-formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
-rotating_file_handler.setFormatter(formatter)
-# add the handler to the root logger
-logging.getLogger('').addHandler(rotating_file_handler)
+    Also writes INFO messages if there is a --verbose flag to ./error.log and standard output
+    """
+    # parser for script arguments like --verbose
+    parser = argparse.ArgumentParser(description='Get reading data from egauge api and insert into database.')
+    # --verbose argument is True if set
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='print INFO level log messages to console and error.log')
+    args = parser.parse_args()
+
+    # set log level to INFO only if verbose is set
+    if args.verbose:
+        log_level = 'INFO'
+    else:
+        log_level = 'ERROR'
+
+    # configure logger which will print log messages to console (only prints ERROR level messages by default; prints INFO level messages if --verbose flag is set)
+    logging.basicConfig(level=log_level, format=__file__ + ': %(message)s')
+
+    # Create a handler that writes log messages to error.log file
+    # rotates error.log every time it reaches 100 MB to limit space usage; keeps up to 5 old error.log files
+    rotating_file_handler = logging.handlers.RotatingFileHandler('error.log', maxBytes=100000000, backupCount=5)
+    # set the message and date format of file handler
+    formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+    rotating_file_handler.setFormatter(formatter)
+    # add the handler to the root logger
+    logging.getLogger('').addHandler(rotating_file_handler)
 
 
 # connect to database by creating a session
@@ -223,6 +231,7 @@ def log_failure_to_connect_to_database(conn, exception, purpose_sensors):
 
 
 if __name__ == '__main__':
+    set_logging_settings()
     # start the database connection
     conn = get_db_handler()
     # get a list of all unique query_string's for active egauges from sensor_info table
