@@ -3,17 +3,51 @@ from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+import argparse
 import configparser
 import csv
 import glob
 import logging
+import logging.handlers
 import orm_hobo
 import os
 import pandas
 import pendulum
 
 
-logging.basicConfig(filename='error.log', format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+SCRIPT_NAME = os.path.basename(__file__)
+
+
+def set_logging_settings():
+    """
+    Sets logging to write ERROR messages by default to ./error.log and standard output
+
+    Also writes INFO messages if there is a --verbose flag to ./error.log and standard output
+    """
+    # parser for script arguments like --verbose
+    parser = argparse.ArgumentParser(description='Get reading data from hobo csv files in project\'s hobo/script/to-insert folder and insert into database.')
+    # --verbose argument is True if set
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help='print INFO level log messages to console and error.log')
+    args = parser.parse_args()
+
+    # set log level to INFO only if verbose is set
+    if args.verbose:
+        log_level = 'INFO'
+    else:
+        log_level = 'ERROR'
+
+    # configure logger which will print log messages to console (only prints ERROR level messages by default; prints INFO level messages if --verbose flag is set)
+    logging.basicConfig(level=log_level, format=__file__ + ': %(message)s')
+
+    # Create a handler that writes log messages to error.log file
+    # rotates error.log every time it reaches 100 MB to limit space usage; keeps up to 5 old error.log files
+    rotating_file_handler = logging.handlers.RotatingFileHandler('error.log', maxBytes=100000000, backupCount=5)
+    # set the message and date format of file handler
+    formatter = logging.Formatter(fmt='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p')
+    rotating_file_handler.setFormatter(formatter)
+    # add the handler to the root logger
+    logging.getLogger('').addHandler(rotating_file_handler)
 
 
 def get_db_handler():
@@ -136,14 +170,14 @@ def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
         if csv_readings.empty:
             return
         else:
-            print('readings extracted from csv')
+            logging.info('readings extracted from ' + csv_filename)
     #executes if not initialized as a dataframe
     elif not csv_readings:
         logging.exception('csv_readings set to None')
         return
     new_readings, earliest_csv_timestamp, csv_modified_timestamp, query_string, latest_csv_timestamp, sensor_info_rows = csv_metadata
     if not new_readings:
-        raise Exception("csv readings already inserted")
+        raise Exception('csv readings from ' + csv_filename + ' already inserted')
     rows_returned = csv_readings.shape[0]
     if rows_returned > 0:
         for csv_reading in csv_readings.itertuples():
@@ -153,6 +187,7 @@ def insert_csv_readings_into_db(conn, csv_readings, csv_metadata, csv_filename):
             last_reading_row_datetime = csv_reading[1]
     #update last_updated_datetime column for relevant rows in sensor_info table
     for sensor_info_row in sensor_info_rows:
+        logging.info('attempting to insert ' + str(rows_returned) + ' reading(s) for purpose_id ' + str(sensor_info_row.purpose_id))
         # account for if csv files uploaded out of order by checking if last_reading_row_datetime is later than last_updated_datetime
         if not sensor_info_row.last_updated_datetime or sensor_info_row.last_updated_datetime < last_reading_row_datetime:
             conn.query(orm_hobo.SensorInfo.purpose_id).filter(orm_hobo.SensorInfo.purpose_id == sensor_info_row.purpose_id).update({"last_updated_datetime": last_reading_row_datetime})
@@ -221,6 +256,7 @@ def log_failure_to_insert_csv_readings_into_db(conn, csv_filename, csv_metadata,
 
 
 if __name__=='__main__':
+    set_logging_settings()
     conn = get_db_handler()
     csv_filenames = glob.glob('./to-insert/*.csv')
     for csv_filename in csv_filenames:

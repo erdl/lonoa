@@ -98,7 +98,7 @@ if __name__=='__main__':
             # and write outputs to crontab.txt in the */script directory
             script_folder = script_name.split('_')[1].split('.py')[0]
             job = cron.new(command='cd ' + project_path + '/' + script_folder + '/script && '
-                                   + 'python3 ' + script_name + ' >> crontab.txt')
+                                   + 'python3 ' + script_name)
         # schedule init_crontab job if not already scheduled
         else:
             job = cron.new(command='cd ' + project_path + '/ && python3 ' + str(script_name) + ' --min=' + str(args.min))
