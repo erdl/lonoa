@@ -1,4 +1,4 @@
-import egauge.script.orm_egauge
+import orm
 import getpass #used to get username
 import os
 import sqlalchemy
@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
         # create all necessary tables in database
         print(__file__ + ': creating tables in database ' + db_name)
-        egauge.script.orm_egauge.setup()
+        orm.setup()
 
         # connect to the created database to add project_folder_path to Project table
         db_url = "postgresql:///" + db_name
@@ -52,7 +52,7 @@ if __name__ == '__main__':
         # check if project_folder_path exists already
         results = conn.execute('SELECT 1 FROM project WHERE project_folder_path = \'' + project_folder_path + '\'')
         if not results.first():
-            project_row = egauge.script.orm_egauge.Project(project_folder_path=project_folder_path)
+            project_row = orm.Project(project_folder_path=project_folder_path)
             conn.add(project_row)
         else:
             print(__file__ + ': project_folder_path ' + project_folder_path + ' already exists in project table')

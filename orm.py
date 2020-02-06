@@ -1,3 +1,4 @@
+#!./env/bin/python3
 """
 This module defines classes for the postgresql tables that store database insertion success and readings
 and functions relating to those tables
@@ -7,8 +8,8 @@ from sqlalchemy import create_engine
 from sqlalchemy import BigInteger, Boolean, Column, Integer, String
 from sqlalchemy.dialects.postgresql import DOUBLE_PRECISION, TIMESTAMP
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.schema import ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.schema import ForeignKey
 from sqlalchemy.types import Enum
 
 import configparser
@@ -171,7 +172,8 @@ def setup():
     """
     Use defined classes to create tables in the database named in config file
     """
-    config_path = str(Path(os.path.dirname(os.path.realpath(__file__))).parent.parent) + "/config.txt"
+    #config_path = str(Path(os.path.dirname(os.path.realpath(__file__))).parent.parent) + "/config.txt"
+    config_path = "config.txt"
     with open(config_path, "r") as file:
         #prepend '[DEFAULT]\n' since ConfigParser requires section headers in config files
         config_string = '[DEFAULT]\n' + file.read()
@@ -195,3 +197,16 @@ def teardown():
     db_url = "postgresql:///" + config['DEFAULT']['db']
     db = create_engine(db_url)
     BASE.metadata.drop_all(db)
+    # Readings.__table__.drop(db) # how to drop one table
+
+# def export_reading_to_csv(db_url=DB_URL, output_filename='reading_dump.csv'):
+#     db = create_engine(db_url)
+#     Session = sessionmaker(db)
+#     session = Session()
+#
+#     with open(output_filename, 'w') as outfile:
+#         outcsv = csv.writer(outfile)
+#         rows = session.query(Reading)
+#         for row in rows:
+#             outcsv.writerow([row.reading_id, row.query_string, row.timestamp, row.units, row.reading])
+#     session.close()

@@ -1,5 +1,5 @@
 import argparse
-import egauge.script.orm_egauge as orm_egauge
+import orm
 import configparser
 import crontab
 import numpy
@@ -44,8 +44,8 @@ if __name__=='__main__':
     conn = Session()
 
     # create a list using a database query that selects each unique active script_folder that is not set to None
-    script_folders = [stype[0] for stype in conn.query(orm_egauge.SensorInfo.script_folder). \
-        filter(orm_egauge.SensorInfo.is_active == True).distinct() if stype[0]]
+    script_folders = [stype[0] for stype in conn.query(orm.SensorInfo.script_folder). \
+        filter(orm.SensorInfo.is_active == True).distinct() if stype[0]]
     print(__file__ + ': extracted active script folders', str(script_folders), 'from database')
 
     # create a list of the active script filenames to compare with jobs in crontab
@@ -62,7 +62,7 @@ if __name__=='__main__':
         database_active_scripts.append(script_filename)
 
     # get path of project to check and create lonoa crontab jobs
-    project_path = conn.query(orm_egauge.Project.project_folder_path).first()[0]
+    project_path = conn.query(orm.Project.project_folder_path).first()[0]
 
     # list that will hold lonoa script names already in crontab
     crontab_active_scripts = []
